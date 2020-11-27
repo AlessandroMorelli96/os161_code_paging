@@ -39,3 +39,4 @@ options virtual_memory_mng
 options synch
 options wait
 options fork
+options file

@@ -459,7 +459,10 @@ optfile		virtual_memory_mng	vm/vm_tlb.c
 defoption	synch
 #optfile 	synch 		thread/synch.c
 
-# LAB 4 a capo
+# LAB 4
 defoption 	fork
 
 defoption 	wait
+
+# LAB 5
+defoption 	file

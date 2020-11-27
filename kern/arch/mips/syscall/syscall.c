@@ -156,8 +156,25 @@ syscall(struct trapframe *tf)
 	        err = sys_fork(tf,&retval);
                 break;
 #endif
-
-	    /* Add stuff here */
+#if OPT_FILE
+	    case SYS_open:
+	        retval = sys_open((userptr_t)tf->tf_a0,
+				  (int)tf->tf_a1,
+				  (mode_t)tf->tf_a2, &err);
+                break;
+#endif
+#if OPT_FILE
+	    case SYS_close:
+	        retval = sys_close((int)tf->tf_a0);
+		if (retval<0) err = ENOENT; 
+                break;
+#endif
+#if OPT_FILE
+            case SYS_remove:
+	      /* just ignore: do nothing */
+	        retval = 0;
+                break;
+#endif
 
 	    default:
 		kprintf("Unknown syscall %d\n", callno);
