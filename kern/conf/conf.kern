@@ -441,9 +441,12 @@ optfile net	test/nettest.c
 
 
 # LABORATORI
+
+# LAB 1
 defoption 	hello
 optfile 	hello 		main/hello.c
 
+# LAB 2
 defoption 	syscalls
 optfile 	syscalls 	syscall/file_syscalls.c
 optfile 	syscalls 	syscall/proc_syscalls.c
@@ -451,3 +454,12 @@ optfile 	syscalls 	syscall/proc_syscalls.c
 defoption 	virtual_memory_mng
 optfile		virtual_memory_mng	vm/vm_tlb.c
 #optfile		virtual_memory_mng	vm/addrspace.c
+
+# LAB 3
+defoption	synch
+#optfile 	synch 		thread/synch.c
+
+# LAB 4 a capo
+defoption 	fork
+
+defoption 	wait

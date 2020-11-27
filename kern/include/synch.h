@@ -37,6 +37,8 @@
 
 #include <spinlock.h>
 
+#include "opt-synch.h"
+
 /*
  * Dijkstra-style semaphore.
  *
@@ -76,6 +78,12 @@ struct lock {
         char *lk_name;
         // add what you need here
         // (don't forget to mark things volatile as needed)
+#if OPT_SYNCH
+
+	struct wchan *lk_wchan;
+	struct spinlock lk_lock;
+        volatile struct thread *lk_owner;
+#endif
 };
 
 struct lock *lock_create(const char *name);
@@ -115,6 +123,10 @@ struct cv {
         char *cv_name;
         // add what you need here
         // (don't forget to mark things volatile as needed)
+#if OPT_SYNCH
+	struct wchan *cv_wchan;
+	struct spinlock cv_lock;
+#endif
 };
 
 struct cv *cv_create(const char *name);
