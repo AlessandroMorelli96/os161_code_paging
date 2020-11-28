@@ -17,7 +17,7 @@
 /* max num of system wide open files */
 #define SYSTEM_OPEN_MAX (10*OPEN_MAX)
 
-#define USE_KERNEL_BUFFER 0
+#define USE_KERNEL_BUFFER 1
 
 /* system open file table */
 struct openfile {
@@ -34,24 +34,31 @@ void openfileIncrRefCount(struct openfile *of) {
   if (of!=NULL)
     of->countRef++;
 }
+#endif
 
-#if USE_KERNEL_BUFFER
+//#if USE_KERNEL_BUFFER
 
+#if OPT_FILE
 static int
 file_read(int fd, userptr_t buf_ptr, size_t size) {
   struct iovec iov;
-  struct uio ku;
-  int result, nread;
+  int result;
   struct vnode *vn;
   struct openfile *of;
+#if USE_KERNEL_BUFFER
+  struct uio ku;
+  int nread;
   void *kbuf;
-
+#else
+  struct uio u;
+#endif
   if (fd<0||fd>OPEN_MAX) return -1;
   of = curproc->fileTable[fd];
   if (of==NULL) return -1;
   vn = of->vn;
   if (vn==NULL) return -1;
 
+#if USE_KERNEL_BUFFER
   kbuf = kmalloc(size);
   uio_kinit(&iov, &ku, kbuf, size, of->offset, UIO_READ);
   result = VOP_READ(vn, &ku);
@@ -63,52 +70,7 @@ file_read(int fd, userptr_t buf_ptr, size_t size) {
   copyout(kbuf,buf_ptr,nread);
   kfree(kbuf);
   return (nread);
-}
-
-static int
-file_write(int fd, userptr_t buf_ptr, size_t size) {
-  struct iovec iov;
-  struct uio ku;
-  int result, nwrite;
-  struct vnode *vn;
-  struct openfile *of;
-  void *kbuf;
-
-  if (fd<0||fd>OPEN_MAX) return -1;
-  of = curproc->fileTable[fd];
-  if (of==NULL) return -1;
-  vn = of->vn;
-  if (vn==NULL) return -1;
-
-  kbuf = kmalloc(size);
-  copyin(buf_ptr,kbuf,size);
-  uio_kinit(&iov, &ku, kbuf, size, of->offset, UIO_WRITE);
-  result = VOP_WRITE(vn, &ku);
-  if (result) {
-    return result;
-  }
-  kfree(kbuf);
-  of->offset = ku.uio_offset;
-  nwrite = size - ku.uio_resid;
-  return (nwrite);
-}
-
 #else
-
-static int
-file_read(int fd, userptr_t buf_ptr, size_t size) {
-  struct iovec iov;
-  struct uio u;
-  int result;
-  struct vnode *vn;
-  struct openfile *of;
-
-  if (fd<0||fd>OPEN_MAX) return -1;
-  of = curproc->fileTable[fd];
-  if (of==NULL) return -1;
-  vn = of->vn;
-  if (vn==NULL) return -1;
-
   iov.iov_ubase = buf_ptr;
   iov.iov_len = size;
 
@@ -127,15 +89,23 @@ file_read(int fd, userptr_t buf_ptr, size_t size) {
 
   of->offset = u.uio_offset;
   return (size - u.uio_resid);
+#endif
 }
+#endif
 
+#if OPT_FILE
 static int
 file_write(int fd, userptr_t buf_ptr, size_t size) {
   struct iovec iov;
-  struct uio u;
   int result, nwrite;
   struct vnode *vn;
   struct openfile *of;
+#if USE_KERNEL_BUFFER
+  struct uio ku;
+  void *kbuf;
+#else
+  struct uio u;
+#endif
 
   if (fd<0||fd>OPEN_MAX) return -1;
   of = curproc->fileTable[fd];
@@ -143,6 +113,19 @@ file_write(int fd, userptr_t buf_ptr, size_t size) {
   vn = of->vn;
   if (vn==NULL) return -1;
 
+#if USE_KERNEL_BUFFER
+  kbuf = kmalloc(size);
+  copyin(buf_ptr,kbuf,size);
+  uio_kinit(&iov, &ku, kbuf, size, of->offset, UIO_WRITE);
+  result = VOP_WRITE(vn, &ku);
+  if (result) {
+    return result;
+  }
+  kfree(kbuf);
+  of->offset = ku.uio_offset;
+  nwrite = size - ku.uio_resid;
+  return (nwrite);
+#else
   iov.iov_ubase = buf_ptr;
   iov.iov_len = size;
 
@@ -161,13 +144,88 @@ file_write(int fd, userptr_t buf_ptr, size_t size) {
   of->offset = u.uio_offset;
   nwrite = size - u.uio_resid;
   return (nwrite);
-}
-
 #endif
+}
+#endif
+
+//#else
+//
+//static int
+//file_read(int fd, userptr_t buf_ptr, size_t size) {
+//  struct iovec iov;
+//  struct uio u;
+//  int result;
+//  struct vnode *vn;
+//  struct openfile *of;
+//
+//  if (fd<0||fd>OPEN_MAX) return -1;
+//  of = curproc->fileTable[fd];
+//  if (of==NULL) return -1;
+//  vn = of->vn;
+//  if (vn==NULL) return -1;
+//
+//  iov.iov_ubase = buf_ptr;
+//  iov.iov_len = size;
+//
+//  u.uio_iov = &iov;
+//  u.uio_iovcnt = 1;
+//  u.uio_resid = size;          // amount to read from the file
+//  u.uio_offset = of->offset;
+//  u.uio_segflg =UIO_USERISPACE;
+//  u.uio_rw = UIO_READ;
+//  u.uio_space = curproc->p_addrspace;
+//
+//  result = VOP_READ(vn, &u);
+//  if (result) {
+//    return result;
+//  }
+//
+//  of->offset = u.uio_offset;
+//  return (size - u.uio_resid);
+//}
+//
+//static int
+//file_write(int fd, userptr_t buf_ptr, size_t size) {
+//  struct iovec iov;
+//  struct uio u;
+//  int result, nwrite;
+//  struct vnode *vn;
+//  struct openfile *of;
+//
+//  if (fd<0||fd>OPEN_MAX) return -1;
+//  of = curproc->fileTable[fd];
+//  if (of==NULL) return -1;
+//  vn = of->vn;
+//  if (vn==NULL) return -1;
+//
+//  iov.iov_ubase = buf_ptr;
+//  iov.iov_len = size;
+//
+//  u.uio_iov = &iov;
+//  u.uio_iovcnt = 1;
+//  u.uio_resid = size;          // amount to read from the file
+//  u.uio_offset = of->offset;
+//  u.uio_segflg =UIO_USERISPACE;
+//  u.uio_rw = UIO_WRITE;
+//  u.uio_space = curproc->p_addrspace;
+//
+//  result = VOP_WRITE(vn, &u);
+//  if (result) {
+//    return result;
+//  }
+//  of->offset = u.uio_offset;
+//  nwrite = size - u.uio_resid;
+//  return (nwrite);
+//}
+//
+//#endif
 
 /*
  * file system calls for open/close
  */
+//#endif
+
+#if OPT_FILE
 int
 sys_open(userptr_t path, int openflags, mode_t mode, int *errp)
 {
@@ -209,7 +267,9 @@ sys_open(userptr_t path, int openflags, mode_t mode, int *errp)
   vfs_close(v);
   return -1;
 }
+#endif
 
+#if OPT_FILE
 /*
  * file system calls for open/close
  */
