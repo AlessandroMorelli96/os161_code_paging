@@ -322,7 +322,7 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 	}
 
 #if OPT_TLB
-	kprintf("[*] tlb replace\n");
+	//kprintf("[*] tlb replace\n");	
 	i = tlb_get_rr_victim();
 	ehi = faultaddress;
 	elo = paddr | TLBLO_VALID | TLBLO_DIRTY;

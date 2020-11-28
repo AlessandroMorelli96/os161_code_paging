@@ -38,6 +38,7 @@
 #include <mips/tlb.h>
 
 #include "vm_tlb.h"
+#include "pt.h"
 
 /*
  * Note! If OPT_DUMBVM is set, as is the case until you start the VM
@@ -52,6 +53,7 @@
 struct addrspace *
 as_create(void)
 {
+	kprintf("as_create\n");
 	struct addrspace *as;
 
 	as = kmalloc(sizeof(struct addrspace));
@@ -66,7 +68,10 @@ as_create(void)
 	as->as_pbase2 = 0;
 	as->as_npages2 = 0;
 	as->as_stackpbase = 0;
-
+	
+#if OPT_PT	
+	pt_create(as);
+#endif
 	return as;
 }
 

@@ -468,3 +468,7 @@ defoption 	file
 # TLB
 defoption 	tlb
 optfile		tlb	vm/vm_tlb.c
+
+#PAGE_TABLE
+defoption	pt
+optfile		pt	vm/pt.c

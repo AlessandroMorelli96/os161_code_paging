@@ -39,6 +39,9 @@
 //#include "opt-dumbvm.h"
 #include "vm_tlb.h"
 #include "opt-virtual_memory_mng.h"
+#include "opt-pt.h"
+
+
 
 struct vnode;
 
@@ -50,6 +53,14 @@ struct vnode;
  * You write this.
  */
 
+#if OPT_PT
+typedef struct{
+	vaddr_t pt_vaddr;
+	paddr_t pt_paddr;
+	struct pagetable * next;
+}pagetable;
+#endif
+
 struct addrspace {
 #if OPT_VIRTUAL_MEMORY_MNG
         vaddr_t as_vbase1;
@@ -59,8 +70,14 @@ struct addrspace {
         paddr_t as_pbase2;
         size_t as_npages2;
         paddr_t as_stackpbase;
+#if OPT_PT
+	pagetable *as_pagetable;
+	int as_pt_npages;
+#endif
 #else
-        /* Put stuff here for your VM system */
+        
+
+/* Put stuff here for your VM system */
 #endif
 };
 
