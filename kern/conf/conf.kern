@@ -453,11 +453,9 @@ optfile 	syscalls 	syscall/proc_syscalls.c
 
 defoption 	virtual_memory_mng
 optfile		virtual_memory_mng	vm/vm_tlb.c
-#optfile		virtual_memory_mng	vm/addrspace.c
 
 # LAB 3
 defoption	synch
-#optfile 	synch 		thread/synch.c
 
 # LAB 4
 defoption 	fork
@@ -466,3 +464,7 @@ defoption 	wait
 
 # LAB 5
 defoption 	file
+
+# TLB
+defoption 	tlb
+optfile		tlb	vm/vm_tlb.c

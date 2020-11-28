@@ -40,3 +40,6 @@ options synch
 options wait
 options fork
 options file
+
+# Progetto
+options tlb

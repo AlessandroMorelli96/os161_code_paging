@@ -33,6 +33,19 @@ static int isTableActive(){
 	return active;
 }
 
+#if OPT_TLB
+static
+int
+tlb_get_rr_victim(void)
+{
+	int victim;
+   	static unsigned int next_victim = 0;
+    	victim = next_victim;
+     	next_victim = (next_victim + 1) % NUM_TLB;
+     	return victim;
+}
+#endif
+
 void
 vm_bootstrap(void)
 {	
@@ -308,7 +321,17 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 		return 0;
 	}
 
+#if OPT_TLB
+	kprintf("[*] tlb replace\n");
+	i = tlb_get_rr_victim();
+	ehi = faultaddress;
+	elo = paddr | TLBLO_VALID | TLBLO_DIRTY;
+	tlb_write(ehi, elo, i);
+	splx(spl);
+	return 0;
+#else
 	kprintf("dumbvm: Ran out of TLB entries - cannot handle page fault\n");
 	splx(spl);
 	return EFAULT;
+#endif
 }

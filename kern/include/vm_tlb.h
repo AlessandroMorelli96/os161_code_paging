@@ -5,6 +5,7 @@
 #include "lib.h"
 
 #include "opt-virtual_memory_mng.h"
+#include "opt-tlb.h"
 
 //int tlb_get_rr_victim(void);
 
