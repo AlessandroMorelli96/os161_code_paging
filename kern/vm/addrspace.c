@@ -78,6 +78,7 @@ as_create(void)
 int
 as_copy(struct addrspace *old, struct addrspace **ret)
 {
+	kprintf("as_copy\n");
 	struct addrspace *new;
 
 	dumbvm_can_sleep();
@@ -101,7 +102,6 @@ as_copy(struct addrspace *old, struct addrspace **ret)
 	KASSERT(new->as_pbase1 != 0);
 	KASSERT(new->as_pbase2 != 0);
 	KASSERT(new->as_stackpbase != 0);
-
 	memmove((void *)PADDR_TO_KVADDR(new->as_pbase1),
 		(const void *)PADDR_TO_KVADDR(old->as_pbase1),
 		old->as_npages1*PAGE_SIZE);
@@ -126,6 +126,13 @@ as_destroy(struct addrspace *as)
 	 */
 
 	dumbvm_can_sleep();
+#if OPT_PT
+	pt_destroy(as);
+	if(as->as_pagetable==NULL)
+		kprintf("vuoto\n");
+	else
+		kprintf("banana\n");
+#endif
 	kfree(as);
 }
 
@@ -179,6 +186,7 @@ int
 as_define_region(struct addrspace *as, vaddr_t vaddr, size_t sz,
 		 int readable, int writeable, int executable)
 {
+	kprintf("as_define_region\n");	
 	size_t npages;
 
 	dumbvm_can_sleep();
@@ -203,6 +211,12 @@ as_define_region(struct addrspace *as, vaddr_t vaddr, size_t sz,
 		return 0;
 	}
 
+#if OPT_PT
+	int res=pt_define_region(as,vaddr,sz,npages,readable,writeable,executable);
+	if(res!=0){
+		kprintf("Errore!!\n");	
+	}
+#endif
 	if (as->as_vbase2 == 0) {
 		as->as_vbase2 = vaddr;
 		as->as_npages2 = npages;
@@ -212,6 +226,8 @@ as_define_region(struct addrspace *as, vaddr_t vaddr, size_t sz,
 	/*
 	 * Support for more than two regions is not available.
 	 */
+
+
 	kprintf("dumbvm: Warning: too many regions\n");
 	return ENOSYS;
 }

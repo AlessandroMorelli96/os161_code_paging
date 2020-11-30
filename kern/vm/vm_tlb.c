@@ -178,7 +178,12 @@ vaddr_t
 alloc_kpages(unsigned npages)
 {
 	paddr_t pa;
-
+	if(isTableActive())	
+	for(int i = 0; i < pagineTotali; i++){
+		kprintf("%d", (int)allocsize[i]);
+	}
+	kprintf("----%d---\n ",pagineTotali);
+	
 	dumbvm_can_sleep();
 	pa = getppages(npages);
 	if (pa==0) {
@@ -322,7 +327,7 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 	}
 
 #if OPT_TLB
-	//kprintf("[*] tlb replace\n");	
+	//kprintf("[*] tlb replace %d\n",i);	
 	i = tlb_get_rr_victim();
 	ehi = faultaddress;
 	elo = paddr | TLBLO_VALID | TLBLO_DIRTY;
