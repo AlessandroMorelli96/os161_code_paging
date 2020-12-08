@@ -1,6 +1,5 @@
 #include "pt.h"
 
-
 #if OPT_PT
 void pt_create(struct addrspace *as){
 	kprintf("pt_create\n");
@@ -31,27 +30,44 @@ void pt_destroy(struct addrspace *as){
 */
 }
 #endif
-static paddr_t vaddr_to_paddr(vaddr_t vaddr){
-	paddr_t paddr;
 
-	return paddr;
-	
-
-}
 #if OPT_PT
+int
+pt_add(paddr_t paddr, struct addrspace *as, vaddr_t vaddr){
+	pagetable *tmp;
+	
+	//kprintf("[*] pt_add\n");
 
+	//kprintf("[*] paddr: 0x%8x\n", paddr);
+	//kprintf("[*] vaddr: 0x%08x\n", vaddr);
+
+	for (tmp = as->as_pagetable;
+		tmp != NULL && tmp->pt_vaddr != vaddr; //&& tmp->pt_paddr == 0;
+		tmp = (pagetable *) tmp->next) {
+
+		//kprintf("[*] tmp->pt_vaddr: 0x%08x", tmp->pt_vaddr);
+		//kprintf(" tmp->pt_paddr: 0x%08x\n", tmp->pt_paddr);
+	}
+
+	if(tmp != NULL){
+		tmp->pt_paddr = paddr;
+		return 1;
+	} else {
+		return 0;
+	}
+}
 #endif
 
-
 #if OPT_PT
-int pt_define_region(struct addrspace *as, vaddr_t vaddr, size_t sz, size_t npages, int readable, int writeable, int executable){
+int
+pt_define_region(struct addrspace *as, vaddr_t vaddr, size_t sz, size_t npages, int readable, int writeable, int executable){
 	kprintf("pt_define_region\n");
 	as->as_pt_npages=(int)npages;
 	
 	pagetable* tmp = as->as_pagetable;
 	int i;
 	for(i = 0; i < (int) npages; i++){
-		tmp->pt_paddr = vaddr_to_paddr(vaddr);
+		tmp->pt_paddr = 0;
 		tmp->pt_vaddr = vaddr + i * PAGE_SIZE;
 		//Controllo per non allocare una pagina in piu
 		if(i!=(int)npages-1)
@@ -70,6 +86,7 @@ int pt_define_region(struct addrspace *as, vaddr_t vaddr, size_t sz, size_t npag
 	(void) readable;
 	(void) writeable;
 	(void) executable;
+	(void) sz;
 	return 0;
 }
 #endif

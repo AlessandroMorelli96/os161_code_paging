@@ -35,16 +35,20 @@
  */
 
 
-#include <vm.h>
-//#include "opt-dumbvm.h"
-#include "vm_tlb.h"
 #include "opt-virtual_memory_mng.h"
 #include "opt-pt.h"
-
-
+#include <vm.h>
+#include "vm_tlb.h"
 
 struct vnode;
 
+#if OPT_PT
+typedef struct Pagetable {
+	vaddr_t pt_vaddr;
+	paddr_t pt_paddr;
+	struct pagetable * next;
+} pagetable;
+#endif
 
 /*
  * Address space - data structure associated with the virtual memory
@@ -52,14 +56,6 @@ struct vnode;
  *
  * You write this.
  */
-
-#if OPT_PT
-typedef struct{
-	vaddr_t pt_vaddr;
-	paddr_t pt_paddr;
-	struct pagetable * next;
-}pagetable;
-#endif
 
 struct addrspace {
 #if OPT_VIRTUAL_MEMORY_MNG
@@ -75,9 +71,8 @@ struct addrspace {
 	int as_pt_npages;
 #endif
 #else
-        
-
 /* Put stuff here for your VM system */
+
 #endif
 };
 

@@ -11,6 +11,7 @@
 #include <vm.h>
 
 #include "vm_tlb.h"
+#include "pt.h"
 
 /* under dumbvm, always have 72k of user stack */
 /* (this must be > 64K so argument blocks of size ARG_MAX will fit) */
@@ -71,6 +72,7 @@ vm_bootstrap(void)
 		freeRamFrames[i] = 1;
 		allocsize[i] = 0;
 	}
+	// Stampa 80 e basta
 	//kprintf("dopo \n");
 
 	//for(i = 0; i < pagineTotali; i++){
@@ -147,6 +149,7 @@ getppages(unsigned long npages)
 		if(addr){
 			int i;
 			int firstPage = addr / PAGE_SIZE;
+			kprintf("getppages npages %d\n", (int)npages);
 			allocsize[firstPage] = npages;
 			for (i = firstPage; i < firstPage + (int)npages; i++){
 				freeRamFrames[i] = 0;
@@ -178,12 +181,19 @@ vaddr_t
 alloc_kpages(unsigned npages)
 {
 	paddr_t pa;
-	if(isTableActive())	
-	for(int i = 0; i < pagineTotali; i++){
-		kprintf("%d", (int)allocsize[i]);
+	kprintf("alloc kpages is Table Active: %d\n", isTableActive());
+	if(isTableActive()){
+		//kprintf("Pagina: %d\n", npages);
+		//for(int i = 0; i < pagineTotali; i++){
+		//	kprintf("%d", (int)allocsize[i]);
+		//}
+		//kprintf("\n");
+		//for(int i = 0; i < pagineTotali; i++){
+		//	kprintf("%d", (int)freeRamFrames[i]);
+		//}
+		//kprintf("\n");
 	}
-	kprintf("----%d---\n ",pagineTotali);
-	
+		
 	dumbvm_can_sleep();
 	pa = getppages(npages);
 	if (pa==0) {
@@ -196,25 +206,25 @@ void
 free_kpages(vaddr_t addr)
 {
 #if OPT_VIRTUAL_MEMORY_MNG
+	kprintf("free kpages is Table Active: %d\n", isTableActive());
 	if(isTableActive()){
-		int npagina = (int)((addr - MIPS_KSEG0)/PAGE_SIZE), i;
+		int npagina = (int)((addr - MIPS_KSEG0)/PAGE_SIZE);
+		int i;
+		kprintf("Pagina: %d\n", npagina);
 		/* nothing - leak the memory. */
 		for(i = npagina; i<allocsize[npagina]+npagina; i++){
 			freeRamFrames[i] = 1;
 		}
 		allocsize[npagina] = 0;
 
-
-	//	kprintf("free kpages is Table Active\n");
-
-	//	for(i = 0; i < pagineTotali; i++){
-	//		kprintf("%d", (int)freeRamFrames[i]);
-	//	}
-	//	kprintf("\n");
-	//	for(i = 0; i < pagineTotali; i++){
-	//		kprintf("%d", (int)allocsize[i]);
-	//	}
-	//	kprintf("\n");
+		//for(i = 0; i < pagineTotali; i++){
+		//	kprintf("%d", (int)allocsize[i]);
+		//}
+		//kprintf("\n");
+		//for(i = 0; i < pagineTotali; i++){
+		//	kprintf("%d", (int)freeRamFrames[i]);
+		//}
+		//kprintf("\n");
 
 
 	}
@@ -252,6 +262,7 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 	    case VM_FAULT_WRITE:
 		break;
 	    default:
+		//kprintf("[*] return switch\n");
 		return EINVAL;
 	}
 
@@ -261,6 +272,7 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 		 * in boot. Return EFAULT so as to panic instead of
 		 * getting into an infinite faulting loop.
 		 */
+		//kprintf("[*] return curproc\n");
 		return EFAULT;
 	}
 
@@ -270,6 +282,7 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 		 * No address space set up. This is probably also a
 		 * kernel fault early in boot.
 		 */
+		//kprintf("[*] return as\n");
 		return EFAULT;
 	}
 
@@ -304,6 +317,7 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 		paddr = (faultaddress - stackbase) + as->as_stackpbase;
 	}
 	else {
+		//kprintf("[*] return\n");
 		return EFAULT;
 	}
 
@@ -312,7 +326,18 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 
 	/* Disable interrupts on this CPU while frobbing the TLB. */
 	spl = splhigh();
+	
+#if OPT_PT
+	//if(isTableActive()){
+	//	//paddr = getppages(1);
+	//	int p = getppages(1);
+	//	if(!pt_add(p, as, faultaddress)){
+	//		//kprintf("PT not found\n");
+	//	}
+	//}
+#endif
 
+	//kprintf("[5] TLB 0x%08x %d\n", faultaddress, faulttype);
 	for (i=0; i<NUM_TLB; i++) {
 		tlb_read(&ehi, &elo, i);
 		if (elo & TLBLO_VALID) {
@@ -327,7 +352,7 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 	}
 
 #if OPT_TLB
-	//kprintf("[*] tlb replace %d\n",i);	
+	//kprintf("[6] tlb replace %d\n",i);	
 	i = tlb_get_rr_victim();
 	ehi = faultaddress;
 	elo = paddr | TLBLO_VALID | TLBLO_DIRTY;

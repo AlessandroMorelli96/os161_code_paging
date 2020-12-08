@@ -242,22 +242,26 @@ as_zero_region(paddr_t paddr, unsigned npages)
 int
 as_prepare_load(struct addrspace *as)
 {
+
 	KASSERT(as->as_pbase1 == 0);
 	KASSERT(as->as_pbase2 == 0);
 	KASSERT(as->as_stackpbase == 0);
 
 	dumbvm_can_sleep();
-
+	
+	kprintf("as prepare load 1 pages %d\n", (int)(as->as_npages1));
 	as->as_pbase1 = getppages(as->as_npages1);
 	if (as->as_pbase1 == 0) {
 		return ENOMEM;
 	}
 
+	kprintf("as prepare load 2 pages %d\n", (int)(as->as_npages2));
 	as->as_pbase2 = getppages(as->as_npages2);
 	if (as->as_pbase2 == 0) {
 		return ENOMEM;
 	}
 
+	kprintf("as prepare load 3 pages %d\n", (int)(DUMBVM_STACKPAGES));
 	as->as_stackpbase = getppages(DUMBVM_STACKPAGES);
 	if (as->as_stackpbase == 0) {
 		return ENOMEM;
