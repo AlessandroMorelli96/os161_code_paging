@@ -70,7 +70,12 @@ as_create(void)
 	as->as_stackpbase = 0;
 	
 #if OPT_PT	
-	pt_create(as);
+	as->as_pagetable = pt_create();
+	if(as->as_pagetable == NULL){
+		kprintf("Errore PT create return NULL\n");
+		return NULL;
+	}
+	as->as_pt_npages = 0;
 #endif
 	return as;
 }
@@ -87,6 +92,14 @@ as_copy(struct addrspace *old, struct addrspace **ret)
 	if (new==NULL) {
 		return ENOMEM;
 	}
+
+#if OPT_PT
+	//new->as_pt_npages = old->as_pt_npages;
+
+	//if(pt_copy(old->as_pagetable, (&new->as_pagetable))){
+	//	kprintf("errore copia pagetable");
+	//}
+#endif
 
 	new->as_vbase1 = old->as_vbase1;
 	new->as_npages1 = old->as_npages1;
@@ -125,13 +138,15 @@ as_destroy(struct addrspace *as)
 	 * Clean up as needed.
 	 */
 
+	kprintf("as_destroy\n");	
 	dumbvm_can_sleep();
 #if OPT_PT
-	pt_destroy(as);
-	if(as->as_pagetable==NULL)
-		kprintf("vuoto\n");
-	else
-		kprintf("banana\n");
+	//pt_destroy(as->as_pagetable);
+	//as->as_pt_npages = 0;
+	//if(as->as_pagetable==NULL)
+	//	kprintf("vuoto\n");
+	//else
+	//	kprintf("banana\n");
 #endif
 	kfree(as);
 }
@@ -142,6 +157,7 @@ as_activate(void)
 	int i, spl;
 	struct addrspace *as;
 
+	//kprintf("as_activate\n");
 	as = proc_getas();
 	if (as == NULL) {
 		return;
@@ -212,9 +228,12 @@ as_define_region(struct addrspace *as, vaddr_t vaddr, size_t sz,
 	}
 
 #if OPT_PT
-	int res=pt_define_region(as,vaddr,sz,npages,readable,writeable,executable);
+	int res=pt_define_region(as->as_pagetable,vaddr,sz,npages,readable,writeable,executable);
 	if(res!=0){
 		kprintf("Errore!!\n");	
+	}else{
+		as->as_pt_npages = (int)npages;
+		kprintf("fine define region!\n");	
 	}
 #endif
 	if (as->as_vbase2 == 0) {
@@ -236,12 +255,14 @@ static
 void
 as_zero_region(paddr_t paddr, unsigned npages)
 {
+	kprintf("as_zero_region\n");	
 	bzero((void *)PADDR_TO_KVADDR(paddr), npages * PAGE_SIZE);
 }
 
 int
 as_prepare_load(struct addrspace *as)
 {
+	kprintf("as_prepare_load\n");	
 
 	KASSERT(as->as_pbase1 == 0);
 	KASSERT(as->as_pbase2 == 0);
@@ -249,19 +270,33 @@ as_prepare_load(struct addrspace *as)
 
 	dumbvm_can_sleep();
 	
-	kprintf("as prepare load 1 pages %d\n", (int)(as->as_npages1));
+#if OPT_PT
+	int res = pt_prepare_load(as->as_pagetable, as->as_pt_npages);
+	if(res == ENOMEM){
+		kprintf("NON va");
+		return ENOMEM;
+	}
+	pagetable* tmp;
+	kprintf("[*] la tabella e' attiva 0x%p\n", as->as_pagetable);
+	for(tmp = as->as_pagetable; tmp != NULL; tmp = (pagetable *) tmp->next){
+		kprintf("vaddr: 0x%08x ", tmp->pt_vaddr);
+		kprintf("paddr: 0x%08x\n", tmp->pt_paddr);
+	}
+#endif
+
+	//kprintf("as prepare load 1 pages %d\n", (int)(as->as_npages1));
 	as->as_pbase1 = getppages(as->as_npages1);
 	if (as->as_pbase1 == 0) {
 		return ENOMEM;
 	}
 
-	kprintf("as prepare load 2 pages %d\n", (int)(as->as_npages2));
+	//kprintf("as prepare load 2 pages %d\n", (int)(as->as_npages2));
 	as->as_pbase2 = getppages(as->as_npages2);
 	if (as->as_pbase2 == 0) {
 		return ENOMEM;
 	}
 
-	kprintf("as prepare load 3 pages %d\n", (int)(DUMBVM_STACKPAGES));
+	//kprintf("as prepare load 3 pages %d\n", (int)(DUMBVM_STACKPAGES));
 	as->as_stackpbase = getppages(DUMBVM_STACKPAGES);
 	if (as->as_stackpbase == 0) {
 		return ENOMEM;
@@ -277,6 +312,7 @@ as_prepare_load(struct addrspace *as)
 int
 as_complete_load(struct addrspace *as)
 {
+	kprintf("as_complete_load\n");	
 	dumbvm_can_sleep();
 	(void)as;
 	return 0;
@@ -285,6 +321,7 @@ as_complete_load(struct addrspace *as)
 int
 as_define_stack(struct addrspace *as, vaddr_t *stackptr)
 {
+	kprintf("as_define_stack\n");	
 	KASSERT(as->as_stackpbase != 0);
 
 	*stackptr = USERSTACK;

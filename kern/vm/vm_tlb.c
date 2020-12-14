@@ -142,6 +142,7 @@ getppages(unsigned long npages)
 	paddr_t addr;
 
 	spinlock_acquire(&stealmem_lock);
+	kprintf("getppages npages %d\n", (int)npages);
 
 #if OPT_VIRTUAL_MEMORY_MNG
 	if(isTableActive()){
@@ -149,19 +150,18 @@ getppages(unsigned long npages)
 		if(addr){
 			int i;
 			int firstPage = addr / PAGE_SIZE;
-			kprintf("getppages npages %d\n", (int)npages);
 			allocsize[firstPage] = npages;
 			for (i = firstPage; i < firstPage + (int)npages; i++){
 				freeRamFrames[i] = 0;
 			}
 
 		}
-	//	kprintf("get ppages is Table Active\n");
+		//kprintf("get ppages is Table Active\n");
 
-	//	for(int i = 0; i < pagineTotali; i++){
-	//		kprintf("%d", (int)freeRamFrames[i]);
-	//	}
-	//	kprintf("\n");
+		//for(int i = 0; i < pagineTotali; i++){
+		//	kprintf("%d", (int)freeRamFrames[i]);
+		//}
+		//kprintf("\n");
 	//	for(int i = 0; i < pagineTotali; i++){
 	//		kprintf("%d", (int)allocsize[i]);
 	//	}
@@ -210,7 +210,6 @@ free_kpages(vaddr_t addr)
 	if(isTableActive()){
 		int npagina = (int)((addr - MIPS_KSEG0)/PAGE_SIZE);
 		int i;
-		kprintf("Pagina: %d\n", npagina);
 		/* nothing - leak the memory. */
 		for(i = npagina; i<allocsize[npagina]+npagina; i++){
 			freeRamFrames[i] = 1;
@@ -249,6 +248,8 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 	uint32_t ehi, elo;
 	struct addrspace *as;
 	int spl;
+	//kprintf("Vm fault\n");
+	//kprintf("faultaddress: 0x%08x\n", faultaddress);
 
 	faultaddress &= PAGE_FRAME;
 
@@ -317,26 +318,39 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 		paddr = (faultaddress - stackbase) + as->as_stackpbase;
 	}
 	else {
-		//kprintf("[*] return\n");
+		//kprintf("[*] return 0x%08x\n", faultaddress);
 		return EFAULT;
 	}
 
+	
+#if OPT_PT
+	//kprintf("Vm fault\n");
+	if(isTableActive() && (faulttype == VM_FAULT_READ || faulttype == VM_FAULT_WRITE)){
+		//kprintf("[*] return 0x%08x\n", faultaddress);
+		//kprintf("[*] paddr 0x%08x\n",paddr);
+		pagetable* tmp;
+		for(tmp = as->as_pagetable; tmp != NULL && tmp->pt_vaddr != faultaddress; tmp = (pagetable *) tmp->next){}
+		if(tmp == NULL){
+	//		kprintf("vm_fault non trovato: 0x%08x\n", faultaddress);
+			paddr = getppages(1);
+		//	//int p = getppages(1);
+		//	//kprintf("[*] paddr 0x%08x\n",paddr);
+			if(pt_add(paddr, as, faultaddress)){
+				kprintf("PT not found\n");
+			}
+		} else {
+			//kprintf("vm_fault trovato: vaddr: 0x%08x faultaddr:0x%08x\n", tmp->pt_vaddr, faultaddress);
+			//kprintf("vm_fault trovato: paddr: 0x%08x tmp->paddr:0x%08x\n", paddr,tmp->pt_paddr);
+			paddr = tmp->pt_paddr;
+		}
+	}
+#endif
 	/* make sure it's page-aligned */
 	KASSERT((paddr & PAGE_FRAME) == paddr);
 
 	/* Disable interrupts on this CPU while frobbing the TLB. */
 	spl = splhigh();
 	
-#if OPT_PT
-	//if(isTableActive()){
-	//	//paddr = getppages(1);
-	//	int p = getppages(1);
-	//	if(!pt_add(p, as, faultaddress)){
-	//		//kprintf("PT not found\n");
-	//	}
-	//}
-#endif
-
 	//kprintf("[5] TLB 0x%08x %d\n", faultaddress, faulttype);
 	for (i=0; i<NUM_TLB; i++) {
 		tlb_read(&ehi, &elo, i);
@@ -347,6 +361,15 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 		elo = paddr | TLBLO_DIRTY | TLBLO_VALID;
 		DEBUG(DB_VM, "dumbvm: 0x%x -> 0x%x\n", faultaddress, paddr);
 		tlb_write(ehi, elo, i);
+		//kprintf("Stampa TLB\n");
+		for (int l=0; l<NUM_TLB; l++) {
+			tlb_read(&ehi, &elo, l);
+			if (elo & TLBLO_VALID) {
+				//kprintf("ehi 0x%08x ", ehi);
+			//	kprintf("elo 0x%08x\n", elo);
+				continue;
+			}
+		}
 		splx(spl);
 		return 0;
 	}

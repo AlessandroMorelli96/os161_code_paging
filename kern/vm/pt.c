@@ -1,19 +1,26 @@
 #include "pt.h"
+#include <kern/errno.h>
 
 #if OPT_PT
-void pt_create(struct addrspace *as){
+pagetable *
+pt_create(void){
 	kprintf("pt_create\n");
-	as->as_pagetable=kmalloc(sizeof(pagetable));
-	KASSERT(as->as_pagetable!=NULL);
-	as->as_pt_npages=0;
+
+	pagetable * new = kmalloc(sizeof(pagetable));
+	
+	if(new == NULL){
+		return NULL;
+	}
+	
+	return new;
 }
 #endif
 
 #if OPT_PT
-void pt_destroy(struct addrspace *as){
+void
+pt_destroy(pagetable *pt){
 	kprintf("pt_destroy\n");
-	(void)as;
-/*	pagetable *tmp=as->as_pagetable;
+	pagetable *tmp = pt;
 	pagetable *old;
 	for(;tmp->next!=NULL;){
 		kprintf("dentro\n");
@@ -24,10 +31,7 @@ void pt_destroy(struct addrspace *as){
 		kfree(old);
 		old=NULL;
 	}
-	kfree(as->as_pagetable);
-	as->as_pagetable=NULL;
-	as->as_pt_npages=0;
-*/
+	//kfree(as->as_pagetable);
 }
 #endif
 
@@ -35,36 +39,41 @@ void pt_destroy(struct addrspace *as){
 int
 pt_add(paddr_t paddr, struct addrspace *as, vaddr_t vaddr){
 	pagetable *tmp;
+	kprintf("pt_add\n");	
 	
 	//kprintf("[*] pt_add\n");
 
 	//kprintf("[*] paddr: 0x%8x\n", paddr);
 	//kprintf("[*] vaddr: 0x%08x\n", vaddr);
-
+	int i=0;
 	for (tmp = as->as_pagetable;
-		tmp != NULL && tmp->pt_vaddr != vaddr; //&& tmp->pt_paddr == 0;
-		tmp = (pagetable *) tmp->next) {
+		tmp->next != NULL; //&& tmp->pt_paddr == 0;
+		tmp = (pagetable *) tmp->next, i++) {
 
 		//kprintf("[*] tmp->pt_vaddr: 0x%08x", tmp->pt_vaddr);
 		//kprintf(" tmp->pt_paddr: 0x%08x\n", tmp->pt_paddr);
 	}
-
-	if(tmp != NULL){
-		tmp->pt_paddr = paddr;
-		return 1;
-	} else {
+	
+	if(i<as->as_pt_npages){
+		pagetable * new = kmalloc(sizeof(pagetable));
+		if(new == NULL)
+			return 1;
+		new->pt_vaddr = vaddr;
+		new->pt_paddr = paddr;
+		new->next = NULL;
+		tmp->next = (struct pagetable *) new;
 		return 0;
-	}
+	} else
+		return 1;
 }
 #endif
 
 #if OPT_PT
 int
-pt_define_region(struct addrspace *as, vaddr_t vaddr, size_t sz, size_t npages, int readable, int writeable, int executable){
+pt_define_region(pagetable *pt, vaddr_t vaddr, size_t sz, size_t npages, int readable, int writeable, int executable){
 	kprintf("pt_define_region\n");
-	as->as_pt_npages=(int)npages;
 	
-	pagetable* tmp = as->as_pagetable;
+	pagetable* tmp = pt;
 	int i;
 	for(i = 0; i < (int) npages; i++){
 		tmp->pt_paddr = 0;
@@ -77,12 +86,12 @@ pt_define_region(struct addrspace *as, vaddr_t vaddr, size_t sz, size_t npages, 
 		 tmp=(pagetable*)tmp->next;
 	}
 	
-	kprintf("[*] npages: %d\n", (int)npages);
-	tmp = (pagetable *) as->as_pagetable;
-	while(tmp){
-		kprintf("[*] tmp vaddr: %08x\n", tmp->pt_vaddr);
-		tmp = (pagetable *) tmp->next;
-	}
+	//kprintf("[*] npages: %d\n", (int)npages);
+	//tmp = (pagetable *) pt;
+	//while(tmp){
+	//	kprintf("[*] tmp vaddr: %08x\n", tmp->pt_vaddr);
+	//	tmp = (pagetable *) tmp->next;
+	//}
 	(void) readable;
 	(void) writeable;
 	(void) executable;
@@ -91,4 +100,57 @@ pt_define_region(struct addrspace *as, vaddr_t vaddr, size_t sz, size_t npages, 
 }
 #endif
 
+#if OPT_PT
+int
+pt_copy(pagetable *old, pagetable **ret){
+	
+	pagetable *new;
+	kprintf("pt_copy\n");	
 
+	new = pt_create();
+	if(new == NULL){
+		return ENOMEM;
+	}
+
+	//new->as_pagetable = (pagetable *) kmalloc(sizeof(pagetable));
+	pagetable * tmp = new;
+	pagetable * old_tmp = old;
+	for(; old_tmp !=NULL; old_tmp = (pagetable *) old_tmp->next, tmp = (pagetable *) tmp->next){
+		tmp->pt_paddr = old_tmp->pt_paddr;
+		tmp->pt_vaddr = old_tmp->pt_vaddr;
+		if(old_tmp->next == NULL)
+			tmp->next = NULL;
+		else
+			tmp->next = kmalloc(sizeof(pagetable));
+	}
+	
+	//tmp = (pagetable *) new->as_pagetable;
+	//old_tmp = (pagetable *) old->as_pagetable;
+	//while(tmp){
+	//	kprintf("[*] tmp vaddr:\t %08x %08x\n", old_tmp->pt_vaddr, tmp->pt_vaddr);
+	//	KASSERT(tmp->pt_paddr != 0);
+	//	KASSERT(tmp->pt_vaddr != 0);
+	//	tmp = (pagetable *) tmp->next;
+	//	old_tmp = (pagetable *) old_tmp->next;
+	//}
+
+	*ret = new;
+	return 0;
+}
+#endif
+
+#if OPT_PT
+int
+pt_prepare_load(pagetable * pt, int npages){
+	kprintf("pt_prepare_load\n");
+	pagetable * tmp = pt;
+	for(; tmp != NULL; tmp = (pagetable *)tmp->next){
+		tmp->pt_paddr = getppages(1);
+		kprintf("paddr: 0x%08x\n", tmp->pt_paddr);
+	}
+	if(pt->pt_paddr == 0)
+		return ENOMEM;
+	(void) npages;
+	return 0;
+}
+#endif

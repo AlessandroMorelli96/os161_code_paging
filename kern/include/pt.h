@@ -6,12 +6,19 @@
 #include <lib.h>
 #include <addrspace.h>
 
-void pt_create(struct addrspace *);
+#if OPT_PT
 
-void pt_destroy(struct addrspace *);
+pagetable * pt_create(void);
 
-int pt_define_region(struct addrspace *, vaddr_t ,size_t, size_t , int , int , int );
+void pt_destroy(pagetable *);
+
+int pt_define_region(pagetable *, vaddr_t ,size_t, size_t , int , int , int );
 
 int pt_add(paddr_t paddr, struct addrspace *as, vaddr_t vaddr);
 
+int pt_copy(pagetable *, pagetable **);
+
+int pt_prepare_load(pagetable *, int);
+
+#endif 
 #endif /* _PT_H_ */
