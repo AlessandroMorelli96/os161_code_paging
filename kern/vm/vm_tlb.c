@@ -263,7 +263,7 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 	    case VM_FAULT_WRITE:
 		break;
 	    default:
-		//kprintf("[*] return switch\n");
+		kprintf("[*] #################\n");
 		return EINVAL;
 	}
 
@@ -273,7 +273,7 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 		 * in boot. Return EFAULT so as to panic instead of
 		 * getting into an infinite faulting loop.
 		 */
-		//kprintf("[*] return curproc\n");
+		kprintf("[*] --------------------- \n");
 		return EFAULT;
 	}
 
@@ -283,7 +283,7 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 		 * No address space set up. This is probably also a
 		 * kernel fault early in boot.
 		 */
-		//kprintf("[*] return as\n");
+		kprintf("[*] ++++++++++++++++++ as\n");
 		return EFAULT;
 	}
 
@@ -318,20 +318,22 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 		paddr = (faultaddress - stackbase) + as->as_stackpbase;
 	}
 	else {
-		//kprintf("[*] return 0x%08x\n", faultaddress);
+		kprintf("[*] *************** 0x%08x\n", faultaddress);
 		return EFAULT;
 	}
 
 	
 #if OPT_PT
-	//kprintf("Vm fault\n");
+	if(faultaddress==4206592)
+	kprintf("V--------------------------m fault 0x%08x\n", faultaddress);
+/*
 	if(isTableActive() && (faulttype == VM_FAULT_READ || faulttype == VM_FAULT_WRITE)){
 		//kprintf("[*] return 0x%08x\n", faultaddress);
 		//kprintf("[*] paddr 0x%08x\n",paddr);
 		pagetable* tmp;
 		for(tmp = as->as_pagetable; tmp != NULL && tmp->pt_vaddr != faultaddress; tmp = (pagetable *) tmp->next){}
 		if(tmp == NULL){
-	//		kprintf("vm_fault non trovato: 0x%08x\n", faultaddress);
+			kprintf("vm_fault NON trovato: \tvaddr:0x%08x\tas_pt_napges:%d+1\n", faultaddress,as->as_pt_npages);
 			paddr = getppages(1);
 		//	//int p = getppages(1);
 		//	//kprintf("[*] paddr 0x%08x\n",paddr);
@@ -339,11 +341,11 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 				kprintf("PT not found\n");
 			}
 		} else {
-			//kprintf("vm_fault trovato: vaddr: 0x%08x faultaddr:0x%08x\n", tmp->pt_vaddr, faultaddress);
-			//kprintf("vm_fault trovato: paddr: 0x%08x tmp->paddr:0x%08x\n", paddr,tmp->pt_paddr);
+			//kprintf("vm_fault trovato: \tvaddr: 0x%08x \ttmp->paddr:0x%08x\n", tmp->pt_vaddr,tmp->pt_paddr);
 			paddr = tmp->pt_paddr;
 		}
 	}
+*/
 #endif
 	/* make sure it's page-aligned */
 	KASSERT((paddr & PAGE_FRAME) == paddr);
@@ -373,9 +375,9 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 		splx(spl);
 		return 0;
 	}
-
+	kprintf("******************* %d\n",i);	
 #if OPT_TLB
-	//kprintf("[6] tlb replace %d\n",i);	
+	kprintf("[6] tlb replace %d\n",i);	
 	i = tlb_get_rr_victim();
 	ehi = faultaddress;
 	elo = paddr | TLBLO_VALID | TLBLO_DIRTY;

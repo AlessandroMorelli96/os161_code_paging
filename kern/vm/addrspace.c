@@ -70,6 +70,7 @@ as_create(void)
 	as->as_stackpbase = 0;
 	
 #if OPT_PT	
+	max_pages=(int) (ram_getsize() / PAGE_SIZE);
 	as->as_pagetable = pt_create();
 	if(as->as_pagetable == NULL){
 		kprintf("Errore PT create return NULL\n");

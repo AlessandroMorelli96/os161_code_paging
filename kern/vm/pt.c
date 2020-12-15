@@ -1,6 +1,7 @@
 #include "pt.h"
 #include <kern/errno.h>
 
+
 #if OPT_PT
 pagetable *
 pt_create(void){
@@ -54,13 +55,14 @@ pt_add(paddr_t paddr, struct addrspace *as, vaddr_t vaddr){
 		//kprintf(" tmp->pt_paddr: 0x%08x\n", tmp->pt_paddr);
 	}
 	
-	if(i<as->as_pt_npages){
-		pagetable * new = kmalloc(sizeof(pagetable));
+	if(i<max_pages){
+		pagetable *new = kmalloc(sizeof(pagetable));
 		if(new == NULL)
 			return 1;
 		new->pt_vaddr = vaddr;
 		new->pt_paddr = paddr;
 		new->next = NULL;
+		as->as_pt_npages++;
 		tmp->next = (struct pagetable *) new;
 		return 0;
 	} else

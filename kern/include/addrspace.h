@@ -48,6 +48,8 @@ typedef struct Pagetable {
 	paddr_t pt_paddr;
 	struct pagetable * next;
 } pagetable;
+
+int max_pages;
 #endif
 
 /*
