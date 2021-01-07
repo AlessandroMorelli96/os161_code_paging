@@ -472,3 +472,7 @@ optfile		tlb	vm/vm_tlb.c
 #PAGE_TABLE
 defoption	pt
 optfile		pt	vm/pt.c
+
+#SWAP
+defoption	swap
+optfile		swap	vm/swap.c

@@ -44,3 +44,4 @@ options file
 # Progetto
 options tlb
 options pt
+options swap

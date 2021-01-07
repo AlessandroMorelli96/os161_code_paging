@@ -20,5 +20,7 @@ int pt_copy(pagetable *, pagetable **);
 
 int pt_prepare_load(pagetable *, int);
 
+//int swap_init(void);
+
 #endif 
 #endif /* _PT_H_ */

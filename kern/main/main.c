@@ -54,7 +54,6 @@
 
 #include "hello.h"
 #include "vm_tlb.h"
-
 /*
  * These two pieces of data are maintained by the makefiles and build system.
  * buildconfig is the name of the config file the kernel was configured with.
@@ -133,6 +132,7 @@ boot(void)
 
 	/* Default bootfs - but ignore failure, in case emu0 doesn't exist */
 	vfs_setbootfs("emu0");
+	
 
 	kheap_nextgeneration();
 

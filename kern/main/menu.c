@@ -130,7 +130,9 @@ common_prog(int nargs, char **args)
 		proc_destroy(proc);
 		return result;
 	}
-
+#if OPT_WAIT	
+	kprintf("Finito: %d\n",proc_wait(proc));
+#endif
 	/*
 	 * The new process will be destroyed when the program exits...
 	 * once you write the code for handling that.
