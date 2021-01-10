@@ -19,6 +19,8 @@
 #include <kern/fcntl.h>
 #include <addrspace.h>
 #include <synch.h>
+#include <mips/tlb.h>
+#include <spl.h>
  
 
 static struct vnode *v;
@@ -34,8 +36,6 @@ int swap_in(struct addrspace *as,pagetable *new,int index){  //leggi da file
 	pagetable *tmp=(pagetable *)as->as_swap;	
 	int indice_swap=index;
 	off_t offset=indice_swap*PAGE_SIZE;
-
-	//
 
 	kprintf("OFFSET:%d ",(int)offset);
 	iov.iov_ubase = (userptr_t)new->pt_vaddr;
@@ -101,7 +101,7 @@ int swap_out(struct addrspace *as, pagetable *old){ //scrivi su file
 		kprintf("prima spero di no\n");
            return result;
         }
-		
+	tlb_invalidate(old->pt_paddr);	
 	return 0;
 	//vop_write
 }
@@ -112,14 +112,14 @@ int swap_out(struct addrspace *as, pagetable *old){ //scrivi su file
 int swap_init_create(void){
 	int result;	
 	kprintf("PRIMA %d \n",SWAPFILE_SIZE);
-	result = vfs_open((char*)"emu0:SWAPFILE", O_CREAT | O_RDWR | O_APPEND, 0, &v);
+	result = vfs_open((char*)"emu0:SWAPFILE", O_CREAT | O_RDWR | O_APPEND, 0664, &v);
 	kprintf("DOPO %d \n",SWAPFILE_NPAGE);
 	if (result) {
 		kprintf("MOLTO MALE %d\n", result);
 		return result;
 	}else{
 		
-		//vfs_close(v);
+		vfs_close(v);
 		return result;
 	}
 	
@@ -134,12 +134,3 @@ int* swap_create(void){
 		swap[i]=2;
 	return swap;
 }
-
-
-
-
-
-
-
-
-

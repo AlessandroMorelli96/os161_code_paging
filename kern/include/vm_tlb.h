@@ -30,4 +30,6 @@ void vm_tlbshootdown(const struct tlbshootdown *ts);
 paddr_t getppages(unsigned long npages);
 
 int freeppages(paddr_t addr, unsigned long npages);
+
+void tlb_invalidate(paddr_t paddr);
 #endif

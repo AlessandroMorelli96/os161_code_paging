@@ -64,6 +64,19 @@ int c=0,i=0;
 }
 #endif
 
+#if OPT_PT
+void tlb_invalidate(paddr_t paddr)
+{
+	uint32_t ehi,elo,i;
+	for (i=0; i<NUM_TLB; i++) {
+		tlb_read(&ehi, &elo, i);
+		if ((elo & 0xfffff000) == (paddr & 0xfffff000))	{
+			tlb_write(TLBHI_INVALID(i), TLBLO_INVALID(), i);		
+		}
+	}
+}
+#endif
+
 void
 vm_bootstrap(void)
 {	
