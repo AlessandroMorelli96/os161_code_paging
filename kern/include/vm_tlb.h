@@ -9,7 +9,12 @@
 
 //int tlb_get_rr_victim(void);
 
+//int occupate;
+
+int occupati(void);
+
 void vm_bootstrap(void);
+
 
 /* Allocate/free some kernel-space virtual pages */
 vaddr_t alloc_kpages(unsigned npages);

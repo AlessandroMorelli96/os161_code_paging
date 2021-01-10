@@ -37,6 +37,7 @@
 #include <spinlock.h>
 #include <mips/tlb.h>
 
+#include <synch.h>
 #include "vm_tlb.h"
 #include "pt.h"
 #include "swap.h"
@@ -79,6 +80,7 @@ as_create(void)
 	}
 	as->as_pt_npages = 0;
 	as->as_in_swapfile=swap_create();
+	as->lk=lock_create("addrresspace");
 #endif
 	return as;
 }

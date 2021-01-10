@@ -47,7 +47,7 @@ typedef struct Pagetable {
 	vaddr_t pt_vaddr;
 	paddr_t pt_paddr;
 	struct pagetable * next;
-
+	struct pagetable * swap_next;
 	int *as_is_swapfile;
 } pagetable;
 
@@ -72,7 +72,9 @@ struct addrspace {
         paddr_t as_stackpbase;*/
 #if OPT_PT
 	pagetable *as_pagetable;
+	pagetable *as_swap;
 	int as_pt_npages;
+	struct lock *lk;
 	int *as_in_swapfile;
 #endif
 #else

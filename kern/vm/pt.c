@@ -21,9 +21,7 @@
 
 struct spinlock pt_splock;
 
-
 #if OPT_PT
-static
 int
 pt_victim(void)
 {
@@ -39,9 +37,6 @@ pt_victim(void)
 pagetable *
 pt_create(void){
 	kprintf("pt_create\n");
-	
-	
-	
 	pagetable * new = kmalloc(sizeof(pagetable));
 	spinlock_init(&pt_splock);
 	if(new == NULL){
@@ -103,8 +98,9 @@ pt_add(paddr_t paddr, struct addrspace *as, vaddr_t vaddr){
 		for (tmp = as->as_pagetable;
 			tmp->next != NULL; //&& tmp->pt_paddr == 0;
 			tmp = (pagetable *) tmp->next, i++) {}
-		kprintf("-----%d",i);
-		if(i<max_pages){ 
+			//kprintf("%d %d\n",i,max_pages); //////////////////////////////////////////
+		if(paddr!=0){ 
+
 			pagetable *new = kmalloc(sizeof(pagetable));
 			if(new == NULL){
 				//spinlock_release(&pt_splock);
@@ -121,34 +117,46 @@ pt_add(paddr_t paddr, struct addrspace *as, vaddr_t vaddr){
 			//kfree(new);
 			//spinlock_release(&pt_splock);
 			return 0;
-		} else if(i<max_pages+SWAPFILE_NPAGE)
+		} else if(i<max_pages+SWAPFILE_NPAGE) //controllo da verificare
 			{
-			kprintf("SWAPPPPPPPPPPPPPPPP \n");
+			kprintf("\nSWAPPPPPPPPPPPPPPPP v:0x%08x ",vaddr);
 			//ricerca vittima e SWAP_OUT 
 			//ricerca vittima
 			int vittima;			
 			do{
 				vittima=pt_victim();
 			}
-			while(as->as_in_swapfile[vittima]==0);
-			as->as_in_swapfile[vittima]=1;
+			while(as->as_in_swapfile[vittima]!=0);
 			pagetable *old=as->as_pagetable;
 			for(int i=0;i<vittima;i++){				
 				old=(pagetable *)old->next;
 			}
-			//swap_out(old);
-			//assegnazione vittima
+			swap_out(as,old);
+			if(!freeppages(old->pt_paddr,1)){
+				kprintf("Errore freeppages\n");
+				return 1;
+			}
+			paddr=getppages(1);
+			if(paddr==0){
+				kprintf("Errore getppages\n");
+				return 1;
+			}			
+			kprintf("p:0x%08x ",paddr);
+			kprintf("ov:0x%08x ",old->pt_vaddr);
+			kprintf("op:0x%08x\n",old->pt_paddr);
+			as->as_in_swapfile[vittima]=1;
+			//assegnazione nuovo elemento in ram aggiunto in coda
 			pagetable *new = kmalloc(sizeof(pagetable));
 			as->as_in_swapfile[as->as_pt_npages]=0;
 			as->as_pt_npages++;
 			new->pt_vaddr = vaddr;
 			new->pt_paddr = paddr;
-			new->next = old->next;
+			new->next = NULL;
 			tmp->next = (struct pagetable *) new;
 			
 
 			//spinlock_release(&pt_splock);
-			return 1;
+			return 0;
 		}
 	}
 	//spinlock_release(&pt_splock);
@@ -160,20 +168,20 @@ pt_add(paddr_t paddr, struct addrspace *as, vaddr_t vaddr){
 int
 pt_define_region(pagetable *pt, vaddr_t vaddr, size_t sz, size_t npages, int readable, int writeable, int executable){
 	//kprintf("pt_define_region\n");
-	spinlock_acquire(&pt_splock);
+	//spinlock_acquire(&pt_splock);
 	pagetable* tmp = pt;
 	int i;
 	for(i = 0; i < (int) npages; i++){
 		tmp->pt_paddr = 0;
 		tmp->pt_vaddr = vaddr + i * PAGE_SIZE;
-		spinlock_release(&pt_splock);
+		//spinlock_release(&pt_splock);
 		//Controllo per non allocare una pagina in piu
 		if(i!=(int)npages-1)
 			tmp->next = kmalloc(sizeof(pagetable));
 		else
 			tmp->next = NULL;
 		 tmp=(pagetable*)tmp->next;
-		spinlock_acquire(&pt_splock);
+		//spinlock_acquire(&pt_splock);
 	}
 	
 	//kprintf("[*] npages: %d\n", (int)npages);
@@ -191,7 +199,7 @@ pt_define_region(pagetable *pt, vaddr_t vaddr, size_t sz, size_t npages, int rea
 	(void) writeable;
 	(void) executable;
 	(void) sz;
-	spinlock_release(&pt_splock);
+	//spinlock_release(&pt_splock);
 	return 0;
 }
 #endif

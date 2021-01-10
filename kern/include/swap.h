@@ -20,11 +20,11 @@ int *swap_map;
 int swap_init_create(void);
 
 int* swap_create(void);
-/*
-int swap_in(int fd, userptr_t buf_ptr, size_t size);//int fd,userptr_t p,size_t s);
 
-int swap_out(int fd, userptr_t buf_ptr, size_t size);//int fd,userptr_t p,size_t s);
-*/
+int swap_in(struct addrspace *as, pagetable *,int);
+
+int swap_out(struct addrspace* , pagetable *);//int fd,userptr_t p,size_t s);
+
 #endif
 
 #endif

@@ -10,6 +10,8 @@
 
 pagetable * pt_create(void);
 
+int pt_victim(void);
+
 void pt_destroy(pagetable *);
 
 int pt_define_region(pagetable *, vaddr_t ,size_t, size_t , int , int , int );
