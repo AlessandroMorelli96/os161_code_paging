@@ -6,7 +6,7 @@
 #include <lib.h>
 #include <vfs.h>
 #include <kern/fcntl.h>
-#include <addrspace.h>
+//#include <addrspace.h>
 #include "pt.h"
 
 
@@ -15,11 +15,17 @@
 #define SWAPFILE_NPAGE SWAPFILE_SIZE/PAGE_SIZE
 
 #if OPT_SWAP
+typedef struct Pagetable_Swap {
+	vaddr_t sw_vaddr;
+	paddr_t sw_paddr;
+} pagetable_swap;
+
+
 int *swap_map;
 
 int swap_init_create(void);
 
-int* swap_create(void);
+int swap_create(struct addrspace *);
 
 int swap_in(struct addrspace *as, pagetable *,int);
 

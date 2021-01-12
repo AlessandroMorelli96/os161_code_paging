@@ -10,7 +10,7 @@
 
 pagetable * pt_create(void);
 
-int pt_victim(void);
+int pt_victim(struct addrspace *as);
 
 void pt_destroy(pagetable *);
 

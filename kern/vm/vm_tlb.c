@@ -399,49 +399,49 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 #if OPT_PT
 	int tlb=0;
 	int indice_pt=0;
+	int indice_sw=-1;
 	if(isTableActive() && (faulttype == VM_FAULT_READ || faulttype == VM_FAULT_WRITE)){
+		//lock_acquire(as->lk);
 		pagetable* tmp=as->as_pagetable;
 
-		if(as->as_pt_npages!=0)	
+		if(as->as_pt_npages!=0){	
 			for(indice_pt=0; tmp != NULL && tmp->pt_vaddr != faultaddress; tmp = (pagetable *) tmp->next,indice_pt++){}
-
-		lock_acquire(as->lk);
-		if(as->as_in_swapfile[indice_pt]==2){ 
-			kprintf("2");
-			if(tmp == NULL || as->as_pt_npages==0){
-				paddr = getppages(1);
-				if(pt_add(paddr, as, faultaddress)){
-					kprintf("PT not found\n");
-					return EFAULT;
-				}
-				tlb=1;
-				tmp=(pagetable *) as->as_pagetable;
-				for(; tmp->next!= NULL; tmp = (pagetable *) tmp->next){}
-			} 
-			/*else {
-				paddr = tmp->pt_paddr;
-			}*/
+			if(tmp==NULL){
+				for(int i=0;i<SWAPFILE_NPAGE;i++)
+					if(as->pts[i]->sw_vaddr==faultaddress) {
+						indice_sw=i;
+						break;
+					}
+			}
 		}
-		else if(as->as_in_swapfile[indice_pt]==1){// swap out swap in
-			//kprintf("SWAP OUT SWAP IN 0x%08x\n",faultaddress);
+
+		if(as->as_pt_npages==0 || (indice_sw==-1 && tmp == NULL)){
+			kprintf("2");
+			paddr = getppages(1);
+			if(pt_add(paddr, as, faultaddress)){
+				kprintf("PT not found\n");
+				return EFAULT;
+			}
+			tlb=1;
+			//tmp=(pagetable *) as->as_pagetable;
+			//for(; tmp->next!= NULL; tmp = (pagetable *) tmp->next){}
+		} 		
+		else if(indice_sw!=-1){// swap out swap in
 			kprintf("1");
 			//SWAP OUT
-			int vittima; 
-			do{
-				vittima=pt_victim();
-			}
-			while(as->as_in_swapfile[vittima]!=0); //ricerca vittima
+			int vittima=pt_victim(as);
 			pagetable *old=as->as_pagetable;
 			for(int i=0;i<vittima;i++){				
 				old=(pagetable *)old->next; //trovo vittima
 			}
-
+			//lock_acquire(as->lk);
 			swap_out(as,old); //swapout vittima
-			as->as_in_swapfile[vittima]=1;
+			//lock_release(as->lk);
+			//as->as_in_swapfile[vittima]=1;
 			//tmp=pagina da recuperare dallo SWAPFILE
 
 			//SWAP IN
-			int index=0;
+			/*int index=0;
 			pagetable *t=(pagetable *)as->as_swap;
 			for(;t->pt_vaddr!=faultaddress && t!=NULL;t=(pagetable*)t->swap_next){
 				index++;
@@ -449,18 +449,20 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 			if(t==NULL){
 				kprintf("errore t!!!\n");
 				return 1;
-			}
-			kprintf("t1v:0x%08x t1p:0x%08x\n",old->pt_vaddr,old->pt_paddr);			
-			swap_in(as,old,index);
-			as->as_in_swapfile[indice_pt]=0;
-			kprintf("t1v:0x%08x t1p:0x%08x\n",old->pt_vaddr,old->pt_paddr);
-			paddr = tmp->pt_paddr;
+			}*/
+			kprintf("SWAP IN PRIMA ov:0x%08x op:0x%08x swp:0x%08x swv:0x%08x\n",old->pt_vaddr,old->pt_paddr,as->pts[indice_sw]->sw_paddr,as->pts[indice_sw]->sw_vaddr);	
+			//lock_acquire(as->lk);	
+			swap_in(as,old,indice_sw);
+			//lock_release(as->lk);
+			//as->as_in_swapfile[indice_pt]=0;
+			kprintf("SWAP IN DOPO ov:0x%08x op:0x%08x \n",old->pt_vaddr,old->pt_paddr);
+			paddr = old->pt_paddr; //indirizzo di dove è stata salvata in ram la pagina grazie alla swap in
 		}
-		else if (as->as_in_swapfile[indice_pt]==0){
+		else if (tmp!=NULL){
 			//kprintf("0");
 			paddr = tmp->pt_paddr;
 		}
-		lock_release(as->lk);
+		//lock_release(as->lk);
 	}
 	
 	if(faulttype==VM_FAULT_READONLY)

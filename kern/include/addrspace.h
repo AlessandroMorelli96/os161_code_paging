@@ -39,6 +39,7 @@
 #include "opt-pt.h"
 #include <vm.h>
 #include "vm_tlb.h"
+#include "swap.h"
 
 struct vnode;
 
@@ -47,8 +48,8 @@ typedef struct Pagetable {
 	vaddr_t pt_vaddr;
 	paddr_t pt_paddr;
 	struct pagetable * next;
-	struct pagetable * swap_next;
-	int *as_is_swapfile;
+	//struct pagetable * swap_next;
+	//int *as_is_swapfile;
 } pagetable;
 
 int max_pages;
@@ -73,9 +74,12 @@ struct addrspace {
 #if OPT_PT
 	pagetable *as_pagetable;
 	pagetable *as_swap;
+	pagetable_swap *pts;
 	int as_pt_npages;
+	int count_swap;
 	struct lock *lk;
-	int *as_in_swapfile;
+	//int *as_in_swapfile;
+	
 #endif
 #else
 /* Put stuff here for your VM system */

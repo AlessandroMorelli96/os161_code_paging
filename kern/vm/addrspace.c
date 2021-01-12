@@ -79,7 +79,9 @@ as_create(void)
 		return NULL;
 	}
 	as->as_pt_npages = 0;
-	as->as_in_swapfile=swap_create();
+	int res=swap_create(as);
+	if(res)
+		return NULL;
 	as->lk=lock_create("addrresspace");
 #endif
 	return as;
