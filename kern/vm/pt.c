@@ -37,7 +37,7 @@ pt_victim(struct addrspace *as)
 #if OPT_PT
 pagetable *
 pt_create(void){
-	kprintf("pt_create\n");
+	//kprintf("pt_create\n");
 	pagetable * new = kmalloc(sizeof(pagetable));
 	//spinlock_init(&pt_splock);
 	if(new == NULL){
@@ -66,7 +66,7 @@ pt_destroy(pagetable *pt){
 		//kfree(old);
 		//old=NULL;
 	}
-	kfree(tmp);
+	freeppages(tmp->pt_paddr,1);
 	//spinlock_release(&pt_splock);
 }
 #endif
@@ -117,7 +117,7 @@ pt_add(paddr_t paddr, struct addrspace *as, vaddr_t vaddr){
 			return 0;
 		} else if(as->count_swap<SWAPFILE_NPAGE) //controllo da verificare
 			{
-			kprintf("\nSWAPPPPPPPPPPPPPPPP v:0x%08x ",vaddr);
+			//kprintf("\nSWAPPPPPPPPPPPPPPPP v:0x%08x ",vaddr);
 			//ricerca vittima e SWAP_OUT 
 			//ricerca vittima
 			/*int vittima;			
@@ -155,13 +155,24 @@ pt_add(paddr_t paddr, struct addrspace *as, vaddr_t vaddr){
 			tmp->next = (struct pagetable *) new;
 			*/
 			
-	
+			//kprintf("\nSWAP OUT PER UNA NUOVA PAGINA v:0x%08x ",vaddr);
 			//ricerca vittima
 			int vittima=pt_victim(as);
 			pagetable *old=as->as_pagetable;
 			for(int i=0;i<vittima;i++){				
 				old=(pagetable *)old->next;
 			}
+			
+			/*kprintf("PAGETABLE prima\n");
+			pagetable * tm=(pagetable*)as->as_pagetable;
+			for(int i=0;i<vittima+2;i++,tm=(pagetable*)tm->next){
+				kprintf("paddr:0x%08x vaddr:0x%08x\n",tm->pt_paddr,tm->pt_vaddr);
+			}
+			kprintf("SWAPFILE prima\n");
+			for(int i=0;i<10;i++)
+				kprintf("SWP:0x%08x SWV:0x%08x\n",as->pts[i].sw_paddr,as->pts[i].sw_vaddr);
+			kprintf("\n");
+			*/
 			swap_out(as,old);
 			
 			if(!freeppages(old->pt_paddr,1)){
@@ -173,16 +184,30 @@ pt_add(paddr_t paddr, struct addrspace *as, vaddr_t vaddr){
 				kprintf("Errore getppages\n");
 				return 1;
 			}
+			/*
 			kprintf("p:0x%08x\n",paddr);
 			kprintf("ov:0x%08x ",old->pt_vaddr);
 			kprintf("op:0x%08x\n",old->pt_paddr);
+			*/
 			old->pt_vaddr=vaddr;
 			old->pt_paddr=paddr;
+			/*
+			kprintf("PAGETABLE dopo\n");
+			tm=(pagetable*)as->as_pagetable;
+			for(int i=0;i<vittima+2;i++,tm=(pagetable*)tm->next){
+				kprintf("paddr:0x%08x vaddr:0x%08x\n",tm->pt_paddr,tm->pt_vaddr);
+			}
+			kprintf("SWAPFILE dopo\n");
+			for(int i=0;i<10;i++)
+				kprintf("SWP:0x%08x SWV:0x%08x\n",as->pts[i].sw_paddr,as->pts[i].sw_vaddr);
+			kprintf("\n");
+			*/
 			//spinlock_release(&pt_splock);
 			return 0;
 		}
 	}
 	//spinlock_release(&pt_splock);
+	panic("ERRORE SWAP MEMORIAAAAA");
 	return 1;
 }
 #endif

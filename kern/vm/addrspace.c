@@ -55,7 +55,7 @@
 struct addrspace *
 as_create(void)
 {
-	kprintf("as_create\n");
+	//kprintf("as_create\n");
 	struct addrspace *as;
 
 	as = kmalloc(sizeof(struct addrspace));
@@ -150,18 +150,14 @@ as_destroy(struct addrspace *as)
 	 * Clean up as needed.
 	 */
 
-	kprintf("as_destroy\n");	
+	//kprintf("as_destroy\n");	
 	dumbvm_can_sleep();
 #if OPT_PT
 
 	pt_destroy(as->as_pagetable);
 	as->as_pt_npages = 0;
 	kfree(as->as_pagetable);
-	if(as->as_pagetable==NULL)
-		kprintf("vuoto\n");
-	else
-		kprintf("banana\n");
-	
+	swap_destroy(as->pts);
 #endif
 	kfree(as);
 }
@@ -334,7 +330,7 @@ kprintf("NON va3");
 int
 as_complete_load(struct addrspace *as)
 {
-	kprintf("as_complete_load\n");	
+	//kprintf("as_complete_load\n");	
 	dumbvm_can_sleep();
 	(void)as;
 	return 0;
@@ -343,7 +339,7 @@ as_complete_load(struct addrspace *as)
 int
 as_define_stack(struct addrspace *as, vaddr_t *stackptr)
 {
-	kprintf("as_define_stack\n");	
+	//kprintf("as_define_stack\n");	
 	//KASSERT(as->as_stackpbase != 0);
 	(void)as;
 	*stackptr = USERSTACK;

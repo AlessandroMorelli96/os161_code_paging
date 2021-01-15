@@ -11,6 +11,14 @@
 
 //int occupate;
 
+
+int tlb_fault,tlb_fault_free,tlb_fault_replace,tlb_invalidation,tlb_reload; //invalidation,reload da fare
+int page_fault_zero,page_fault_disk,page_fault_elf,page_fault_swap;
+int swap_write;
+
+
+
+
 int occupati(void);
 
 void vm_bootstrap(void);

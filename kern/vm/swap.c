@@ -29,14 +29,14 @@ static struct vnode *v;
 #if OPT_SWAP
 
 int swap_in(struct addrspace *as,pagetable *new,int index){  //leggi da file
-	kprintf("\nSWAP_IN ");	
+	//kprintf("SWAP_IN ");	
 	struct iovec iov;
         struct uio u;
         int result;
 	off_t offset=index*PAGE_SIZE;
 
-	kprintf("OFFSET:%d ",(int)offset);
-	iov.iov_ubase = (userptr_t)new->pt_paddr;
+	//kprintf("OFFSET:%d ",(int)offset);
+	iov.iov_ubase = (userptr_t)PADDR_TO_KVADDR(new->pt_paddr);
         iov.iov_len = PAGE_SIZE;       // length of the memory space
         u.uio_iov = &iov;
         u.uio_iovcnt = 1;
@@ -57,10 +57,10 @@ int swap_in(struct addrspace *as,pagetable *new,int index){  //leggi da file
 		indice_swap++;
 	}
 	*/
-	kprintf("nv:0x%08x np:0x%08x\n",new->pt_vaddr,new->pt_paddr);
+	//kprintf("nv:0x%08x np:0x%08x\n",new->pt_vaddr,new->pt_paddr);
 	//liberiamo pagina nello swap
-	as->pts[index]->sw_paddr=0;
-	as->pts[index]->sw_vaddr=0;
+	as->pts[index].sw_paddr=0;
+	as->pts[index].sw_vaddr=0;
 	as->count_swap--;
 	return 0;
 }
@@ -69,7 +69,6 @@ int swap_in(struct addrspace *as,pagetable *new,int index){  //leggi da file
 #if OPT_SWAP
 int swap_out(struct addrspace *as, pagetable *old){ //scrivi su file
 
-	kprintf("\nSWAP_OUT ");
 	struct iovec iov;
         struct uio u;
         int result,spl;
@@ -80,12 +79,12 @@ int swap_out(struct addrspace *as, pagetable *old){ //scrivi su file
 
 	//ricerca pagina libera nello swapfile
 	for(i=0;i<SWAPFILE_NPAGE;i++){
-		if(as->pts[i]->sw_paddr==0)
+		if(as->pts[i].sw_paddr==0)
 			break;
 	}
 	
 	off_t offset=i*PAGE_SIZE;
-	kprintf("OFFSET:%d\n",(int)offset);
+	//kprintf("OFFSET:%d\n",(int)offset);
 
 	iov.iov_ubase = (userptr_t)PADDR_TO_KVADDR(old->pt_paddr);
         iov.iov_len = PAGE_SIZE;       // length of the memory space
@@ -106,14 +105,15 @@ int swap_out(struct addrspace *as, pagetable *old){ //scrivi su file
         }
 
 	//inserimento nella swap
-	as->pts[i]->sw_paddr=old->pt_paddr;
-	as->pts[i]->sw_vaddr=old->pt_vaddr;
+	as->pts[i].sw_paddr=old->pt_paddr;
+	as->pts[i].sw_vaddr=old->pt_vaddr;
 	as->count_swap++;
 
 	//invalido la riga nella tlb
 	spl = splhigh();
 	tlb_invalidate(old->pt_paddr);	
 	splx(spl);
+	swap_write++;
 	return 0;
 }
 #endif
@@ -138,8 +138,8 @@ int swap_init_create(void){
 #endif
 
 int swap_create(struct addrspace *as){
-	int* swap;
-	kprintf("swap_create\n");
+	//int* swap;
+	//kprintf("swap_create\n");
 	as->count_swap=0;
 	/*swap=kmalloc((SWAPFILE_NPAGE+max_pages)*sizeof(int));
 	if(swap==NULL)
@@ -151,11 +151,16 @@ int swap_create(struct addrspace *as){
 	if(as->pts==NULL)
 		return 1;
 	for(int i=0;i<SWAPFILE_NPAGE;i++){
-		as->pts[i]->sw_paddr=0;
-		as->pts[i]->sw_vaddr=0;
+		as->pts[i].sw_paddr=0;
+		as->pts[i].sw_vaddr=0;
 	}
 	//as->as_in_swap=swap;
 	return 0;
+}
+
+void swap_destroy(pagetable_swap *swap){
+	kfree(swap);
+	return;
 }
 
 

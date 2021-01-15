@@ -39,7 +39,7 @@
 #include "opt-pt.h"
 #include <vm.h>
 #include "vm_tlb.h"
-#include "swap.h"
+//#include "swap.h"
 
 struct vnode;
 
@@ -53,6 +53,19 @@ typedef struct Pagetable {
 } pagetable;
 
 int max_pages;
+
+typedef struct Pagetable_Swap {
+	vaddr_t sw_vaddr;
+	paddr_t sw_paddr;
+} pagetable_swap;
+
+
+
+
+
+
+
+
 #endif
 
 /*

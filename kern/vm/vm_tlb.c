@@ -108,6 +108,10 @@ vm_bootstrap(void)
 		kprintf("ERRORE CREAZIONE SWAPFILE\n");
 		return;
 	}
+	tlb_fault=tlb_fault_free=tlb_fault_replace=tlb_invalidation=tlb_reload=0;
+	page_fault_zero=page_fault_disk=page_fault_elf=page_fault_swap=0;
+	swap_write=0;
+
 #endif
 
 
@@ -224,20 +228,8 @@ getppages(unsigned long npages)
 vaddr_t
 alloc_kpages(unsigned npages)
 {
-	//static int l=0;
+	
 	paddr_t pa;
-	//kprintf("alloc kpages is Table Active: %d\n", isTableActive());
-	if(isTableActive()){
-		//kprintf("Pagina: %d\n", npages);
-		//for(int i = 0; i < pagineTotali; i++){
-		//	kprintf("%d", (int)allocsize[i]);
-		//}
-		//kprintf("\n");
-		//for(int i = 0; i < pagineTotali; i++){
-		//	kprintf("%d", (int)freeRamFrames[i]);
-		//}
-		//kprintf("\n");
-	}
 		
 	dumbvm_can_sleep();
 	pa = getppages(npages);
@@ -282,23 +274,11 @@ free_kpages(vaddr_t addr)
 #if OPT_VIRTUAL_MEMORY_MNG
 	//kprintf("free kpages\n");
 	if(isTableActive()){
-		//int npagina = (int)((addr - MIPS_KSEG0)/PAGE_SIZE);
-		//int i;
-		/* nothing - leak the memory. */
-		
-		/*
-		for(i = npagina; i<allocsize[npagina]+npagina; i++){
-			freeRamFrames[i] = 1;
-		}
-		allocsize[npagina] = 0;
-		*/
-		
 		paddr_t paddr = addr - MIPS_KSEG0;
 		long first = paddr/PAGE_SIZE;	
 		KASSERT(allocsize!=NULL);
 		KASSERT(pagineTotali>first);
-		freeppages(paddr, allocsize[first]);	
-
+		freeppages(paddr, allocsize[first]);
 	}
 #endif
 	/* nothing - leak the memory. */
@@ -325,9 +305,9 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 	//kprintf("faultaddress: 0x%08x\n", faultaddress);
 
 	faultaddress &= PAGE_FRAME;
-
+	
 	DEBUG(DB_VM, "dumbvm: fault: 0x%x\n", faultaddress);
-
+	
 	switch (faulttype) {
 	    case VM_FAULT_READONLY:
 		/* We always create pages read-write, so we can't get this */
@@ -397,18 +377,17 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 	}
 */
 #if OPT_PT
-	int tlb=0;
 	int indice_pt=0;
 	int indice_sw=-1;
 	if(isTableActive() && (faulttype == VM_FAULT_READ || faulttype == VM_FAULT_WRITE)){
-		//lock_acquire(as->lk);
+		
 		pagetable* tmp=as->as_pagetable;
 
 		if(as->as_pt_npages!=0){	
 			for(indice_pt=0; tmp != NULL && tmp->pt_vaddr != faultaddress; tmp = (pagetable *) tmp->next,indice_pt++){}
 			if(tmp==NULL){
 				for(int i=0;i<SWAPFILE_NPAGE;i++)
-					if(as->pts[i]->sw_vaddr==faultaddress) {
+					if(as->pts[i].sw_vaddr==faultaddress) {
 						indice_sw=i;
 						break;
 					}
@@ -416,53 +395,51 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 		}
 
 		if(as->as_pt_npages==0 || (indice_sw==-1 && tmp == NULL)){
-			kprintf("2");
+			//kprintf("2");
+			lock_acquire(as->lk);
 			paddr = getppages(1);
 			if(pt_add(paddr, as, faultaddress)){
 				kprintf("PT not found\n");
+				lock_release(as->lk);
 				return EFAULT;
 			}
-			tlb=1;
-			//tmp=(pagetable *) as->as_pagetable;
-			//for(; tmp->next!= NULL; tmp = (pagetable *) tmp->next){}
+			if(paddr==0){
+				tmp=(pagetable *) as->as_pagetable;
+				for(; tmp->pt_vaddr!= faultaddress && tmp!=NULL; tmp = (pagetable *) tmp->next){}
+				if(tmp->pt_vaddr==faultaddress) 
+					paddr=tmp->pt_paddr;
+				else {
+					kprintf("PADDR NON TROVATO MA DOVEVA ESSERCIII\n");
+					lock_release(as->lk);
+					return EFAULT;
+				}
+			}
+			page_fault_elf++;
+			lock_release(as->lk);
 		} 		
 		else if(indice_sw!=-1){// swap out swap in
-			kprintf("1");
+			lock_acquire(as->lk);
+			//kprintf("1");
 			//SWAP OUT
 			int vittima=pt_victim(as);
 			pagetable *old=as->as_pagetable;
+			
 			for(int i=0;i<vittima;i++){				
 				old=(pagetable *)old->next; //trovo vittima
 			}
-			//lock_acquire(as->lk);
+			
 			swap_out(as,old); //swapout vittima
-			//lock_release(as->lk);
-			//as->as_in_swapfile[vittima]=1;
-			//tmp=pagina da recuperare dallo SWAPFILE
-
-			//SWAP IN
-			/*int index=0;
-			pagetable *t=(pagetable *)as->as_swap;
-			for(;t->pt_vaddr!=faultaddress && t!=NULL;t=(pagetable*)t->swap_next){
-				index++;
-			}
-			if(t==NULL){
-				kprintf("errore t!!!\n");
-				return 1;
-			}*/
-			kprintf("SWAP IN PRIMA ov:0x%08x op:0x%08x swp:0x%08x swv:0x%08x\n",old->pt_vaddr,old->pt_paddr,as->pts[indice_sw]->sw_paddr,as->pts[indice_sw]->sw_vaddr);	
-			//lock_acquire(as->lk);	
+			
 			swap_in(as,old,indice_sw);
-			//lock_release(as->lk);
-			//as->as_in_swapfile[indice_pt]=0;
-			kprintf("SWAP IN DOPO ov:0x%08x op:0x%08x \n",old->pt_vaddr,old->pt_paddr);
+			old->pt_vaddr=faultaddress;
+
 			paddr = old->pt_paddr; //indirizzo di dove è stata salvata in ram la pagina grazie alla swap in
+			page_fault_swap++;
+			lock_release(as->lk);
 		}
 		else if (tmp!=NULL){
-			//kprintf("0");
 			paddr = tmp->pt_paddr;
 		}
-		//lock_release(as->lk);
 	}
 	
 	if(faulttype==VM_FAULT_READONLY)
@@ -477,8 +454,8 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 	/* Disable interrupts on this CPU while frobbing the TLB. */
 	spl = splhigh();
 	
-	//kprintf("[5] TLB 0x%08x %d\n", faultaddress, faulttype);
-	for (i=0; i<NUM_TLB; i++) {
+	
+	for (i=0; i<3; i++) {
 		tlb_read(&ehi, &elo, i);
 		if (elo & TLBLO_VALID) {
 			continue;
@@ -486,28 +463,19 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 		ehi = faultaddress;
 		elo = paddr | TLBLO_DIRTY | TLBLO_VALID;
 		DEBUG(DB_VM, "dumbvm: 0x%x -> 0x%x\n", faultaddress, paddr);
+		tlb_fault++;
+		tlb_fault_free++;
 		tlb_write(ehi, elo, i);
 		splx(spl);	
-		if(tlb==1){	
-			for(int l=0;l<NUM_TLB;l++){
-				tlb_read(&ehi, &elo, l);
-				//if (elo & TLBLO_VALID) 
-					//kprintf("ehi: 0x%08x\telo: 0x%08x\n",ehi,elo);
-			}
-		}
 		return 0;
 	}
-	//kprintf("******************* %d\n",i);	
+	
 #if OPT_TLB
-	//kprintf("[6] tlb replace %d paddr: 0x%08x\t faultaddress: 0x%08x\t\t\n",i,paddr,faultaddress);
-	/*for(int l=0;l<NUM_TLB;l++){
-		tlb_read(&ehi, &elo, l);
-		if (elo & TLBLO_VALID) 
-			//kprintf("ehi: 0x%08x\telo: 0x%08x\n",ehi,elo);
-	}*/
 	i = tlb_get_rr_victim();
 	ehi = faultaddress;
 	elo = paddr | TLBLO_VALID | TLBLO_DIRTY;
+	tlb_fault++;
+	tlb_fault_replace++;
 	tlb_write(ehi, elo, i);
 	splx(spl);
 	return 0;

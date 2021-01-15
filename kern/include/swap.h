@@ -15,12 +15,6 @@
 #define SWAPFILE_NPAGE SWAPFILE_SIZE/PAGE_SIZE
 
 #if OPT_SWAP
-typedef struct Pagetable_Swap {
-	vaddr_t sw_vaddr;
-	paddr_t sw_paddr;
-} pagetable_swap;
-
-
 int *swap_map;
 
 int swap_init_create(void);
@@ -30,6 +24,8 @@ int swap_create(struct addrspace *);
 int swap_in(struct addrspace *as, pagetable *,int);
 
 int swap_out(struct addrspace* , pagetable *);//int fd,userptr_t p,size_t s);
+
+void swap_destroy(pagetable_swap *);
 
 #endif
 
