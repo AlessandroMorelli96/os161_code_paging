@@ -31,16 +31,15 @@
 #include <kern/errno.h>
 #include <lib.h>
 #include <addrspace.h>
-#include <vm.h>
 #include <proc.h>
 #include <spl.h>
-#include <spinlock.h>
 #include <mips/tlb.h>
-
 #include <synch.h>
+
 #include "vm_tlb.h"
 #include "pt.h"
 #include "swap.h"
+#include "vmstats.h"
 
 /*
  * Note! If OPT_DUMBVM is set, as is the case until you start the VM
@@ -64,7 +63,7 @@ as_create(void)
 	}
 	/*
 	as->as_vbase1 = 0;
-	as->as_pbase1 = 0;
+	//as->as_pbase1 = 0;
 	as->as_npages1 = 0;
 	as->as_vbase2 = 0;
 	as->as_pbase2 = 0;
@@ -184,7 +183,9 @@ as_activate(void)
 	for (i=0; i<NUM_TLB; i++) {
 		tlb_write(TLBHI_INVALID(i), TLBLO_INVALID(), i);
 	}
-
+#if OPT_PT
+	tlb_invalidation++;
+#endif
 	splx(spl);
 
 }
@@ -234,14 +235,14 @@ as_define_region(struct addrspace *as, vaddr_t vaddr, size_t sz,
 	(void)as;
 	(void)vaddr;
 	(void)sz;
-	return 0;
+	//return 0;
 /*
 	if (as->as_vbase1 == 0) {
 		as->as_vbase1 = vaddr;
 		as->as_npages1 = npages;
 		return 0;
-	}
-*/
+	}*/
+	return 0;
 #if OPT_PT
 	/*
 	int res=pt_define_region(as->as_pagetable,vaddr,sz,npages,readable,writeable,executable);

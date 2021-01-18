@@ -78,7 +78,7 @@ typedef struct Pagetable_Swap {
 struct addrspace {
 #if OPT_VIRTUAL_MEMORY_MNG
         /*vaddr_t as_vbase1;
-        paddr_t as_pbase1;
+        //paddr_t as_pbase1;
         size_t as_npages1;
         vaddr_t as_vbase2;
         paddr_t as_pbase2;

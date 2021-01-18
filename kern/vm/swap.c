@@ -1,30 +1,13 @@
 #include "swap.h"
-
-#include <kern/errno.h>
-#include <spinlock.h>
-
-#include <copyinout.h>
-#include <current.h>
-#include <vnode.h>
+#include "vmstats.h"
 #include <vfs.h>
-#include <limits.h>
+#include <vnode.h>
 #include <uio.h>
-#include <proc.h>
-#include <types.h>
-#include <kern/unistd.h>
-#include <kern/errno.h>
-#include <clock.h>
-#include <syscall.h>
-#include <lib.h>
-#include <kern/fcntl.h>
 #include <addrspace.h>
-#include <synch.h>
-#include <mips/tlb.h>
 #include <spl.h>
- 
+#include <kern/fcntl.h>
 
 static struct vnode *v;
-//vaddr_t entrypoint, stackptr;
 
 #if OPT_SWAP
 
@@ -35,7 +18,6 @@ int swap_in(struct addrspace *as,pagetable *new,int index){  //leggi da file
         int result;
 	off_t offset=index*PAGE_SIZE;
 
-	//kprintf("OFFSET:%d ",(int)offset);
 	iov.iov_ubase = (userptr_t)PADDR_TO_KVADDR(new->pt_paddr);
         iov.iov_len = PAGE_SIZE;       // length of the memory space
         u.uio_iov = &iov;
@@ -46,22 +28,17 @@ int swap_in(struct addrspace *as,pagetable *new,int index){  //leggi da file
         u.uio_rw = UIO_READ;
         u.uio_space = NULL;
 
-	//lock_release(as->lk);
         result = VOP_READ(v, &u);
-	//lock_acquire(as->lk);
+
         if (result) {
+		kprintf("ERRORE IN SWAP IN\n");
            return result;
         }
-	/*
-	for(;tmp->swap_next!=NULL;tmp=(pagetable*)tmp->swap_next){
-		indice_swap++;
-	}
-	*/
-	//kprintf("nv:0x%08x np:0x%08x\n",new->pt_vaddr,new->pt_paddr);
 	//liberiamo pagina nello swap
 	as->pts[index].sw_paddr=0;
 	as->pts[index].sw_vaddr=0;
 	as->count_swap--;
+	page_fault_swap++;
 	return 0;
 }
 #endif
@@ -84,7 +61,6 @@ int swap_out(struct addrspace *as, pagetable *old){ //scrivi su file
 	}
 	
 	off_t offset=i*PAGE_SIZE;
-	//kprintf("OFFSET:%d\n",(int)offset);
 
 	iov.iov_ubase = (userptr_t)PADDR_TO_KVADDR(old->pt_paddr);
         iov.iov_len = PAGE_SIZE;       // length of the memory space
@@ -96,11 +72,10 @@ int swap_out(struct addrspace *as, pagetable *old){ //scrivi su file
         u.uio_rw = UIO_WRITE;
         u.uio_space = NULL;
 
-	//lock_release(as->lk);
         result = VOP_WRITE(v, &u);
-	//lock_acquire(as->lk);
+
         if (result) {
-		kprintf("prima spero di no\n");
+		kprintf("ERRORE IN SWAP OUT\n");
            return result;
         }
 
@@ -122,31 +97,21 @@ int swap_out(struct addrspace *as, pagetable *old){ //scrivi su file
 #if OPT_SWAP
 int swap_init_create(void){
 	int result;	
-	kprintf("PRIMA %d \n",SWAPFILE_SIZE);
+
 	result = vfs_open((char*)"emu0:SWAPFILE", O_CREAT | O_RDWR | O_APPEND, 0, &v);
-	kprintf("DOPO %d \n",SWAPFILE_NPAGE);
+
 	if (result) {
 		kprintf("MOLTO MALE %d\n", result);
 		return result;
 	}else{
-		
-		//vfs_close(v);
 		return result;
 	}
-	
 }
 #endif
 
 int swap_create(struct addrspace *as){
-	//int* swap;
-	//kprintf("swap_create\n");
 	as->count_swap=0;
-	/*swap=kmalloc((SWAPFILE_NPAGE+max_pages)*sizeof(int));
-	if(swap==NULL)
-		return 1;
-	for(int i=0;i<SWAPFILE_NPAGE+max_pages;i++)
-		swap[i]=2;
-	*/
+	
 	as->pts=kmalloc((SWAPFILE_NPAGE)*sizeof(pagetable_swap));
 	if(as->pts==NULL)
 		return 1;
@@ -163,6 +128,10 @@ void swap_destroy(pagetable_swap *swap){
 	return;
 }
 
+void vfs_close_swap(void){
+	vfs_close(v);
+	return;
+}
 
 
 

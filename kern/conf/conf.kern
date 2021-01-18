@@ -476,3 +476,7 @@ optfile		pt	vm/pt.c
 #SWAP
 defoption	swap
 optfile		swap	vm/swap.c
+
+#STATS
+defoption	vmstats
+optfile		vmstats	vm/vmstats.c
