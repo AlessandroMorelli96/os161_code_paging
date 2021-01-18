@@ -45,3 +45,4 @@ options file
 options tlb
 options pt
 options swap
+options vmstats

@@ -54,6 +54,8 @@
 
 #include "hello.h"
 #include "vm_tlb.h"
+#include "vmstats.h"
+
 /*
  * These two pieces of data are maintained by the makefiles and build system.
  * buildconfig is the name of the config file the kernel was configured with.
@@ -144,14 +146,6 @@ boot(void)
 }
 
 
-static void stampa_statistiche(void){
-	if(tlb_fault_free+tlb_fault_replace!=tlb_fault) kprintf("Non corretto");
-	//if(tlb_reload+page_fault_disk+page_fault_zero!=tlb_fault) kprintf("Non corretto");
-	//if(page_fault_elf+page_fault_swap!=page_fault_disk) kprintf("Non corretto");
-	kprintf("Tlb fault: %d\nTlb fault free:%d\nTlb fault replace:%d\nTlb invalidation:%d\nTlb reload:%d\n",tlb_fault,tlb_fault_free,tlb_fault_replace,tlb_invalidation,tlb_reload);
-	kprintf("Page falut zero:%d\nPage fault disk:%d\nPage fault ELF:%d\nPage fault swap:%d\n",page_fault_zero,page_fault_disk,page_fault_elf,page_fault_swap);
-	kprintf("Page fault write:%d\n",swap_write);
-}
 
 
 /*
@@ -166,7 +160,7 @@ shutdown(void)
 	kprintf("Shutting down.\n");
 
 	stampa_statistiche();
-
+	vfs_close_swap_wrap();
 	vfs_clearbootfs();
 	vfs_clearcurdir();
 	vfs_unmountall();
