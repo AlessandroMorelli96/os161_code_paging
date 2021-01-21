@@ -4,16 +4,16 @@
 #include "types.h"
 #include "lib.h"
 
-#include "opt-vmstats.h" 	
+//#include "opt-vmstats.h" 	
+#include "opt-code.h"
 
-
-#if OPT_VMSTATS
+#if OPT_CODE
 int tlb_fault,tlb_fault_free,tlb_fault_replace,tlb_invalidation,tlb_reload; //invalidation,reload da fare
 int page_fault_zero,page_fault_disk,page_fault_elf,page_fault_swap;
 int swap_write;
 #endif
 
-#if OPT_VMSTATS
+#if OPT_CODE
 void stampa_statistiche(void);
 #endif
 

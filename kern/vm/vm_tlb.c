@@ -15,6 +15,7 @@
 #include "pt.h"
 #include "swap.h"
 #include "vmstats.h"
+#include "syscall.h"
 
 /* under dumbvm, always have 72k of user stack */
 /* (this must be > 64K so argument blocks of size ARG_MAX will fit) */
@@ -36,7 +37,7 @@ static int isTableActive(){
 	return active;
 }
 
-#if OPT_TLB
+#if OPT_CODE
 static int tlb_get_rr_victim(void) {
 	int victim;
    	static unsigned int next_victim = 0;
@@ -46,7 +47,7 @@ static int tlb_get_rr_victim(void) {
 }
 #endif
 
-#if OPT_PT
+#if OPT_CODE
 void tlb_invalidate(paddr_t paddr) {
 	uint32_t ehi,elo,i;
 	for (i=0; i<NUM_TLB; i++) {
@@ -82,7 +83,7 @@ vm_bootstrap(void) {
 		allocsize[i] = 0;
 	}
 
-#if OPT_SWAP
+#if OPT_CODE
 	int result=swap_init_create();
 	if(result){
 		kprintf("ERRORE CREAZIONE SWAPFILE\n");
@@ -141,10 +142,9 @@ static paddr_t getfirstfit(unsigned long npages){
 #endif
 
 paddr_t getppages(unsigned long npages) {
-	paddr_t addr;
 
+	paddr_t addr;
 	spinlock_acquire(&stealmem_lock);
-	//kprintf("\tgetppages npages richieste %d in %d totali\n", (int)npages, pagineTotali);
 
 #if OPT_VIRTUAL_MEMORY_MNG
 	if(isTableActive()){
@@ -159,21 +159,11 @@ paddr_t getppages(unsigned long npages) {
 
 		}
 		int tot=0;
-		//kprintf("get ppages is Table Active\n");
 		for(int i = 0; i < pagineTotali; i++){
 			if(freeRamFrames[i]==0)
 				tot++;
 	
 		}
-		//kprintf("\tget ppages %d\n",tot);
-		//for(int i = 0; i < pagineTotali; i++){
-		//	kprintf("%d", (int)freeRamFrames[i]);
-		//}
-		//kprintf("\n");
-	//	for(int i = 0; i < pagineTotali; i++){
-	//		kprintf("%d", (int)allocsize[i]);
-	//	}
-	//	kprintf("\n");
 	} else{
 		addr = ram_stealmem(npages);
 	}
@@ -202,7 +192,6 @@ vaddr_t alloc_kpages(unsigned npages) {
 			if(freeRamFrames[i]==1)
 				c++;
 		}
-		kprintf("Pagine totali: %d\t Pagine Libere: %d\tPagine occupate: %d\n",pagineTotali,c,pagineTotali-c);
 	}
 	return PADDR_TO_KVADDR(pa);
 }
@@ -228,7 +217,6 @@ int freeppages(paddr_t addr, unsigned long npages){
 
 void free_kpages(vaddr_t addr) {
 #if OPT_VIRTUAL_MEMORY_MNG
-	//kprintf("free kpages\n");
 	if(isTableActive()){
 		paddr_t paddr = addr - MIPS_KSEG0;
 		long first = paddr/PAGE_SIZE;	
@@ -257,7 +245,6 @@ int vm_fault(int faulttype, vaddr_t faultaddress) {
 	uint32_t ehi, elo;
 	struct addrspace *as;
 	int spl;
-
 	faultaddress &= PAGE_FRAME;
 	
 	DEBUG(DB_VM, "dumbvm: fault: 0x%x\n", faultaddress);
@@ -265,7 +252,9 @@ int vm_fault(int faulttype, vaddr_t faultaddress) {
 	switch (faulttype) {
 	    case VM_FAULT_READONLY:
 		/* We always create pages read-write, so we can't get this */
-		panic("dumbvm: got VM_FAULT_READONLY\n");
+		//sys__exit(35);
+		
+		//panic("dumbvm: got VM_FAULT_READONLY\n");
 	    case VM_FAULT_READ:
 	    case VM_FAULT_WRITE:
 		break;
@@ -321,16 +310,21 @@ int vm_fault(int faulttype, vaddr_t faultaddress) {
 		paddr = (faultaddress - stackbase) + as->as_stackpbase;
 	}
 	else {
-#if OPT_PT
+#if OPT_CODE
 		kprintf("[*] ***************\n 0x%08x\nvbase1: 0x%08x\tvtop1: 0x%08x\nvbase2: 0x%08x \tvtop2: 0x%08x\nstackbase: 0x%08x\t stacktop: 0x%08x\n*********************\n", 			faultaddress,vbase1,vtop1,vbase2,vtop2,stackbase,stacktop);
 #endif
 		return EFAULT;
 	}
 */
-#if OPT_PT
+
+	vaddr_t vbase1 = as->as_vbase1;
+	vaddr_t vtop1 = vbase1 + as->as_npages1 * PAGE_SIZE;
+	//kprintf("0x%08x     0x%08x\t\t\t0x%08x\n",vbase1,vtop1,faultaddress);
+
+#if OPT_CODE
 	int indice_pt=0;
 	int indice_sw=-1;
-	if(isTableActive() && (faulttype == VM_FAULT_READ || faulttype == VM_FAULT_WRITE)){
+	if(isTableActive() ){//&& (faulttype == VM_FAULT_READ || faulttype == VM_FAULT_WRITE)){
 		
 		pagetable* tmp=as->as_pagetable;
 
@@ -346,11 +340,10 @@ int vm_fault(int faulttype, vaddr_t faultaddress) {
 		}
 
 		if(as->as_pt_npages==0 || (indice_sw==-1 && tmp == NULL)){
-			//kprintf("2");
 			lock_acquire(as->lk);
 			paddr = getppages(1);
 			if(pt_add(paddr, as, faultaddress)){
-				kprintf("PT not found\n");
+				kprintf("PT non trovata\n");
 				lock_release(as->lk);
 				return EFAULT;
 			}
@@ -370,7 +363,6 @@ int vm_fault(int faulttype, vaddr_t faultaddress) {
 		} 		
 		else if(indice_sw!=-1){// swap out swap in
 			lock_acquire(as->lk);
-			//kprintf("1");
 			//SWAP OUT
 			int vittima=pt_victim(as);
 			pagetable *old=as->as_pagetable;
@@ -378,15 +370,17 @@ int vm_fault(int faulttype, vaddr_t faultaddress) {
 			for(int i=0;i<vittima;i++){				
 				old=(pagetable *)old->next; //trovo vittima
 			}
+
 			if(as->count_swap>=SWAPFILE_NPAGE) //controllo di non avere lo swapfile pieno
 				panic("Out of swap space\n");
+
 			if(swap_out(as,old)){//swapout vittima
 				return EFAULT;
 			} 
 
-			if(swap_in(as,old,indice_sw)){ //swap in pagina ricercata
+			if(swap_in(as,old,indice_sw)) //swap in pagina ricercata
 				return EFAULT;
-			};
+
 			old->pt_vaddr=faultaddress;
 
 			paddr = old->pt_paddr; //indirizzo di dove è stata salvata in ram la pagina grazie alla swap in
@@ -400,16 +394,13 @@ int vm_fault(int faulttype, vaddr_t faultaddress) {
 		}
 	}
 	if(faulttype==VM_FAULT_READONLY || page_fault_elf==2){
-		kprintf("READ ONLY\n");	
-		//struct proc *p = curproc;
-		//p->p_status = 0; /* just lower 8 bits returned */
-		//proc_remthread(curthread);
-		//proc_signal_end(p);
-		
+		kprintf("READ ONLY\n");
+		//sys__exit(35);
 	}
 #endif
 
 	/* make sure it's page-aligned */
+	
 	KASSERT((paddr & PAGE_FRAME) == paddr);
 
 	/* Disable interrupts on this CPU while frobbing the TLB. */
@@ -418,23 +409,38 @@ int vm_fault(int faulttype, vaddr_t faultaddress) {
 	for (i=0; i<NUM_TLB; i++) {
 		tlb_read(&ehi, &elo, i);
 		if (elo & TLBLO_VALID) {
+			if (ehi >= vbase1 && ehi < vtop1) {
+				//kprintf("paddr: 0x%08x   0x%08x----> 0x%08x\n",paddr,TLBLO_VALID,paddr|TLBLO_VALID);
+				elo = elo & ~TLBLO_DIRTY;
+				tlb_write(ehi, elo, i);
+			}
 			continue;
 		}
 		ehi = faultaddress;
 		elo = paddr | TLBLO_DIRTY | TLBLO_VALID;
-		//if(as->as_vbase1<=faultaddress && (as->as_vbase1+(as->as_npages1*PAGE_SIZE))>faultaddress){kprintf("ENTRATO\n");elo = (paddr & ~TLBLO_DIRTY) | TLBLO_VALID;}
+		
 		DEBUG(DB_VM, "dumbvm: 0x%x -> 0x%x\n", faultaddress, paddr);
 		tlb_fault++;
 		tlb_fault_free++;
 		tlb_write(ehi, elo, i);
+		for(int l=0;l<NUM_TLB;l++){
+			tlb_read(&ehi, &elo, l);
+			if (elo & TLBLO_VALID) {
+				//kprintf("%d- ehi: 0x%08x\telo: 0x%08x\n",tlb_fault,ehi,elo);
+			}
+		}
 		splx(spl);	
 		return 0;
 	}
 	
-#if OPT_TLB
+#if OPT_CODE
 	i = tlb_get_rr_victim();
 	ehi = faultaddress;
 	elo = paddr | TLBLO_DIRTY | TLBLO_VALID;
+	if (faultaddress >= vbase1 && faultaddress < vtop1) {
+		kprintf("faultaddress: 0x%08x\tpaddr: 0x%08x   0x%08x----> 0x%08x\n",faultaddress,paddr,TLBLO_VALID,paddr|TLBLO_VALID);
+		elo = paddr | TLBLO_VALID;
+	}
 	//if(as->as_vbase1<=faultaddress && (as->as_vbase1+(as->as_npages1*PAGE_SIZE))>faultaddress){kprintf("ENTRATO\n");elo = (paddr & ~TLBLO_DIRTY) | TLBLO_VALID;}
 	tlb_fault++;
 	tlb_fault_replace++;

@@ -466,17 +466,32 @@ defoption 	wait
 defoption 	file
 
 # TLB
-defoption 	tlb
-optfile		tlb	vm/vm_tlb.c
+#defoption 	tlb
+#optfile		tlb	vm/vm_tlb.c
 
 #PAGE_TABLE
-defoption	pt
-optfile		pt	vm/pt.c
+#defoption	pt
+#optfile		pt	vm/pt.c
 
 #SWAP
-defoption	swap
-optfile		swap	vm/swap.c
+#defoption	swap
+#optfile		swap	vm/swap.c
 
 #STATS
-defoption	vmstats
-optfile		vmstats	vm/vmstats.c
+#defoption	vmstats
+#optfile		vmstats	vm/vmstats.c
+
+#CODE
+defoption	code
+optfile		code	vm/vmstats.c
+optfile		code	vm/pt.c
+optfile		code	vm/swap.c
+optfile		code	vm/vm_tlb.c
+
+
+
+
+
+
+
+

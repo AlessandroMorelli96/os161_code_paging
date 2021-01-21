@@ -36,35 +36,26 @@
 
 
 #include "opt-virtual_memory_mng.h"
-#include "opt-pt.h"
+//#include "opt-pt.h"
+#include "opt-code.h"
 #include <vm.h>
 #include "vm_tlb.h"
-//#include "swap.h"
 
 struct vnode;
 
-#if OPT_PT
+#if OPT_CODE
 typedef struct Pagetable {
 	vaddr_t pt_vaddr;
 	paddr_t pt_paddr;
 	struct pagetable * next;
-	//struct pagetable * swap_next;
-	//int *as_is_swapfile;
 } pagetable;
 
-int max_pages;
+//int max_pages;
 
 typedef struct Pagetable_Swap {
 	vaddr_t sw_vaddr;
 	paddr_t sw_paddr;
 } pagetable_swap;
-
-
-
-
-
-
-
 
 #endif
 
@@ -77,26 +68,22 @@ typedef struct Pagetable_Swap {
 
 struct addrspace {
 #if OPT_VIRTUAL_MEMORY_MNG
-        /*vaddr_t as_vbase1;
+        vaddr_t as_vbase1;
         //paddr_t as_pbase1;
         size_t as_npages1;
-        vaddr_t as_vbase2;
+        /*vaddr_t as_vbase2;
         paddr_t as_pbase2;
         size_t as_npages2;
         paddr_t as_stackpbase;*/
-#if OPT_PT
+#if OPT_CODE
 	pagetable *as_pagetable;
-	pagetable *as_swap;
+	//pagetable *as_swap;
 	pagetable_swap *pts;
 	int as_pt_npages;
 	int count_swap;
+	int as_active;
 	struct lock *lk;
-	//int *as_in_swapfile;
-	
 #endif
-#else
-/* Put stuff here for your VM system */
-
 #endif
 };
 

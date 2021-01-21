@@ -1,6 +1,6 @@
 #include "vmstats.h"
 
-#if OPT_VMSTATS
+#if OPT_CODE
 void stampa_statistiche(void){
 	if(tlb_fault_free+tlb_fault_replace!=tlb_fault) kprintf("Non corretto");
 	//if(tlb_reload+page_fault_disk+page_fault_zero!=tlb_fault) kprintf("Non corretto");

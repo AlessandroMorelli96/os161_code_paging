@@ -9,10 +9,9 @@
 
 static struct vnode *v;
 
-#if OPT_SWAP
-
+#if OPT_CODE
 int swap_in(struct addrspace *as,pagetable *new,int index){  //leggi da file
-	//kprintf("SWAP_IN ");	
+
 	struct iovec iov;
         struct uio u;
         int result;
@@ -32,8 +31,9 @@ int swap_in(struct addrspace *as,pagetable *new,int index){  //leggi da file
 
         if (result) {
 		kprintf("ERRORE IN SWAP IN\n");
-           return result;
+	        return result;
         }
+
 	//liberiamo pagina nello swap
 	as->pts[index].sw_paddr=0;
 	as->pts[index].sw_vaddr=0;
@@ -43,7 +43,7 @@ int swap_in(struct addrspace *as,pagetable *new,int index){  //leggi da file
 }
 #endif
 
-#if OPT_SWAP
+#if OPT_CODE
 int swap_out(struct addrspace *as, pagetable *old){ //scrivi su file
 
 	struct iovec iov;
@@ -94,14 +94,14 @@ int swap_out(struct addrspace *as, pagetable *old){ //scrivi su file
 #endif
 
 
-#if OPT_SWAP
+#if OPT_CODE
 int swap_init_create(void){
 	int result;	
 
 	result = vfs_open((char*)"emu0:SWAPFILE", O_CREAT | O_RDWR | O_APPEND, 0, &v);
 
 	if (result) {
-		kprintf("MOLTO MALE %d\n", result);
+		kprintf("Errore apertura swapfile %d\n", result);
 		return result;
 	}else{
 		return result;
@@ -109,30 +109,39 @@ int swap_init_create(void){
 }
 #endif
 
+#if OPT_CODE
 int swap_create(struct addrspace *as){
-	as->count_swap=0;
-	
+
+	as->count_swap=0;	
 	as->pts=kmalloc((SWAPFILE_NPAGE)*sizeof(pagetable_swap));
+
 	if(as->pts==NULL)
 		return 1;
+
 	for(int i=0;i<SWAPFILE_NPAGE;i++){
 		as->pts[i].sw_paddr=0;
 		as->pts[i].sw_vaddr=0;
 	}
-	//as->as_in_swap=swap;
+
 	return 0;
 }
+#endif
 
+#if OPT_CODE
 void swap_destroy(pagetable_swap *swap){
+
 	kfree(swap);
 	return;
 }
+#endif
 
+#if OPT_CODE
 void vfs_close_swap(void){
+
 	vfs_close(v);
 	return;
 }
-
+#endif
 
 
 

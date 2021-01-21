@@ -130,7 +130,8 @@ common_prog(int nargs, char **args)
 		proc_destroy(proc);
 		return result;
 	}
-#if OPT_WAIT	
+#if OPT_WAIT
+	kprintf("Quasi finito %d\n", proc->p_pid);	
 	kprintf("Finito: %d\n",proc_wait(proc));
 #endif
 	/*

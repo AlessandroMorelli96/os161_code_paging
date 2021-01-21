@@ -105,7 +105,7 @@ boot(void)
 	kprintf("%s", harvard_copyright);
 	kprintf("\n");
 
-	kprintf("Put-your-group-name-here's system version %s (%s #%d)\n",
+	kprintf("Missio-Morelli-Mulatero's system version %s (%s #%d)\n",
 		GROUP_VERSION, buildconfig, buildversion);
 	kprintf("\n");
 
@@ -158,9 +158,10 @@ shutdown(void)
 {
 
 	kprintf("Shutting down.\n");
-
+#if OPT_CODE
 	stampa_statistiche();
 	vfs_close_swap_wrap();
+#endif
 	vfs_clearbootfs();
 	vfs_clearcurdir();
 	vfs_unmountall();
