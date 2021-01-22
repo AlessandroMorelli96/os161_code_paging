@@ -38,6 +38,8 @@
 #include "opt-file.h"
 struct trapframe; /* from <machine/trapframe.h> */
 
+#define ROME 65 //ReadOnlyMemoryException
+
 /*
  * The system call dispatcher.
  */

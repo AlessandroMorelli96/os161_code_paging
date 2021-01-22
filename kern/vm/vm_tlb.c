@@ -21,6 +21,7 @@
 /* (this must be > 64K so argument blocks of size ARG_MAX will fit) */
 #define DUMBVM_STACKPAGES    18
 
+
 static struct spinlock stealmem_lock = SPINLOCK_INITIALIZER;
 static struct spinlock freemem_lock = SPINLOCK_INITIALIZER;
 
@@ -248,13 +249,11 @@ int vm_fault(int faulttype, vaddr_t faultaddress) {
 	faultaddress &= PAGE_FRAME;
 	
 	DEBUG(DB_VM, "dumbvm: fault: 0x%x\n", faultaddress);
-	
+
 	switch (faulttype) {
 	    case VM_FAULT_READONLY:
-		/* We always create pages read-write, so we can't get this */
-		//sys__exit(35);
-		
-		//panic("dumbvm: got VM_FAULT_READONLY\n");
+		//readonly memory exception con terminazione processo
+		sys__exit(ROME);
 	    case VM_FAULT_READ:
 	    case VM_FAULT_WRITE:
 		break;
@@ -393,10 +392,7 @@ int vm_fault(int faulttype, vaddr_t faultaddress) {
 			paddr = tmp->pt_paddr;
 		}
 	}
-	if(faulttype==VM_FAULT_READONLY || page_fault_elf==2){
-		kprintf("READ ONLY\n");
-		//sys__exit(35);
-	}
+	
 #endif
 
 	/* make sure it's page-aligned */
@@ -438,7 +434,7 @@ int vm_fault(int faulttype, vaddr_t faultaddress) {
 	ehi = faultaddress;
 	elo = paddr | TLBLO_DIRTY | TLBLO_VALID;
 	if (faultaddress >= vbase1 && faultaddress < vtop1) {
-		kprintf("faultaddress: 0x%08x\tpaddr: 0x%08x   0x%08x----> 0x%08x\n",faultaddress,paddr,TLBLO_VALID,paddr|TLBLO_VALID);
+		//kprintf("faultaddress: 0x%08x\tpaddr: 0x%08x   0x%08x----> 0x%08x\n",faultaddress,paddr,TLBLO_VALID,paddr|TLBLO_VALID);
 		elo = paddr | TLBLO_VALID;
 	}
 	//if(as->as_vbase1<=faultaddress && (as->as_vbase1+(as->as_npages1*PAGE_SIZE))>faultaddress){kprintf("ENTRATO\n");elo = (paddr & ~TLBLO_DIRTY) | TLBLO_VALID;}
