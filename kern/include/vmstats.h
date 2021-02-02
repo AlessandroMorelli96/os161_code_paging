@@ -15,6 +15,17 @@ int swap_write;
 
 #if OPT_CODE
 void stampa_statistiche(void);
+
+void fault(void);
+void free(void);
+void replace(void);
+void invalidation(void);
+void reload(void);
+void zero(void);
+void disk(void);
+void elf(void);
+void swap(void);
+void swapwrite(void);
 #endif
 
 #endif

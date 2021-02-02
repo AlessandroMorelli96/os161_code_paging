@@ -1,10 +1,3 @@
-/*
- * AUthor: G.Cabodi
- * Very simple implementation of sys__exit.
- * It just avoids crash/panic. Full process exit still TODO
- * Address space is released
- */
-
 #include <types.h>
 #include <kern/unistd.h>
 #include <kern/errno.h>
@@ -15,10 +8,7 @@
 #include <proc.h>
 #include <thread.h>
 #include <addrspace.h>
-
 #include "current.h"
-//#include "synch.h"
-//#include "syscall.h"
 #include <mips/trapframe.h>
 
 /*
@@ -28,6 +18,7 @@
 void
 sys__exit(int status)
 {
+
 #if OPT_WAIT
   struct proc *p = curproc;
   p->p_status = status & 0xff; /* just lower 8 bits returned */
@@ -38,6 +29,7 @@ sys__exit(int status)
   struct addrspace *as = proc_getas();
   as_destroy(as);
 #endif
+  
   thread_exit();
 
   panic("thread_exit returned (should not happen)\n");
@@ -133,7 +125,6 @@ int sys_fork(struct trapframe *ctf, pid_t *retval) {
   }
 
   *retval = newp->p_pid;
-
   return 0;
 }
 #endif

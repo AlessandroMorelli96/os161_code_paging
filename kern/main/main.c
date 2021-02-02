@@ -159,8 +159,8 @@ shutdown(void)
 
 	kprintf("Shutting down.\n");
 #if OPT_CODE
-	stampa_statistiche();
-	vfs_close_swap_wrap();
+	stampa_statistiche();	//stampa delle statistiche dei test effettuati
+	vfs_close_swap_wrap();	//chiusura swapfile
 #endif
 	vfs_clearbootfs();
 	vfs_clearcurdir();

@@ -131,9 +131,8 @@ common_prog(int nargs, char **args)
 		return result;
 	}
 #if OPT_WAIT
-	kprintf("Quasi finito %d\n", proc->p_pid);
 	int exit_code=proc_wait(proc)	;
-	kprintf("Finito: %d\n",exit_code);
+	kprintf("Exit code: %d\n",exit_code);
 	if(exit_code==ROME)
 		kprintf("ReadOnly Memory Exception\n");
 #endif

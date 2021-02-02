@@ -37,8 +37,9 @@ int swap_in(struct addrspace *as,pagetable *new,int index){  //leggi da file
 	//liberiamo pagina nello swap
 	as->pts[index].sw_paddr=0;
 	as->pts[index].sw_vaddr=0;
-	as->count_swap--;
-	page_fault_swap++;
+	as->as_sw_npages--;
+
+	swap();	//incremento page_fault_swap
 	return 0;
 }
 #endif
@@ -50,8 +51,8 @@ int swap_out(struct addrspace *as, pagetable *old){ //scrivi su file
         struct uio u;
         int result,spl;
 	int i=0;
-	if(as->count_swap>=SWAPFILE_NPAGE){
-		panic("ERRORE SWAPFILE PIENO");
+	if(as->as_sw_npages>=SWAPFILE_NPAGE){
+		panic("Out of swap space\n");
 	}
 
 	//ricerca pagina libera nello swapfile
@@ -82,13 +83,14 @@ int swap_out(struct addrspace *as, pagetable *old){ //scrivi su file
 	//inserimento nella swap
 	as->pts[i].sw_paddr=old->pt_paddr;
 	as->pts[i].sw_vaddr=old->pt_vaddr;
-	as->count_swap++;
+	as->as_sw_npages++;
 
 	//invalido la riga nella tlb
 	spl = splhigh();
 	tlb_invalidate(old->pt_paddr);	
 	splx(spl);
-	swap_write++;
+
+	swapwrite();	//incremento swap_write
 	return 0;
 }
 #endif
@@ -112,7 +114,7 @@ int swap_init_create(void){
 #if OPT_CODE
 int swap_create(struct addrspace *as){
 
-	as->count_swap=0;	
+	as->as_sw_npages=0;	
 	as->pts=kmalloc((SWAPFILE_NPAGE)*sizeof(pagetable_swap));
 
 	if(as->pts==NULL)
@@ -129,7 +131,6 @@ int swap_create(struct addrspace *as){
 
 #if OPT_CODE
 void swap_destroy(pagetable_swap *swap){
-
 	kfree(swap);
 	return;
 }
@@ -137,7 +138,6 @@ void swap_destroy(pagetable_swap *swap){
 
 #if OPT_CODE
 void vfs_close_swap(void){
-
 	vfs_close(v);
 	return;
 }

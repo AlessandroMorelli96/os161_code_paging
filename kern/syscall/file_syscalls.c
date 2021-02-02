@@ -148,83 +148,6 @@ file_write(int fd, userptr_t buf_ptr, size_t size) {
 }
 #endif
 
-//#else
-//
-//static int
-//file_read(int fd, userptr_t buf_ptr, size_t size) {
-//  struct iovec iov;
-//  struct uio u;
-//  int result;
-//  struct vnode *vn;
-//  struct openfile *of;
-//
-//  if (fd<0||fd>OPEN_MAX) return -1;
-//  of = curproc->fileTable[fd];
-//  if (of==NULL) return -1;
-//  vn = of->vn;
-//  if (vn==NULL) return -1;
-//
-//  iov.iov_ubase = buf_ptr;
-//  iov.iov_len = size;
-//
-//  u.uio_iov = &iov;
-//  u.uio_iovcnt = 1;
-//  u.uio_resid = size;          // amount to read from the file
-//  u.uio_offset = of->offset;
-//  u.uio_segflg =UIO_USERISPACE;
-//  u.uio_rw = UIO_READ;
-//  u.uio_space = curproc->p_addrspace;
-//
-//  result = VOP_READ(vn, &u);
-//  if (result) {
-//    return result;
-//  }
-//
-//  of->offset = u.uio_offset;
-//  return (size - u.uio_resid);
-//}
-//
-//static int
-//file_write(int fd, userptr_t buf_ptr, size_t size) {
-//  struct iovec iov;
-//  struct uio u;
-//  int result, nwrite;
-//  struct vnode *vn;
-//  struct openfile *of;
-//
-//  if (fd<0||fd>OPEN_MAX) return -1;
-//  of = curproc->fileTable[fd];
-//  if (of==NULL) return -1;
-//  vn = of->vn;
-//  if (vn==NULL) return -1;
-//
-//  iov.iov_ubase = buf_ptr;
-//  iov.iov_len = size;
-//
-//  u.uio_iov = &iov;
-//  u.uio_iovcnt = 1;
-//  u.uio_resid = size;          // amount to read from the file
-//  u.uio_offset = of->offset;
-//  u.uio_segflg =UIO_USERISPACE;
-//  u.uio_rw = UIO_WRITE;
-//  u.uio_space = curproc->p_addrspace;
-//
-//  result = VOP_WRITE(vn, &u);
-//  if (result) {
-//    return result;
-//  }
-//  of->offset = u.uio_offset;
-//  nwrite = size - u.uio_resid;
-//  return (nwrite);
-//}
-//
-//#endif
-
-/*
- * file system calls for open/close
- */
-//#endif
-
 #if OPT_FILE
 int
 sys_open(userptr_t path, int openflags, mode_t mode, int *errp)
@@ -292,9 +215,7 @@ sys_close(int fd)
   vfs_close(vn);	
   return 0;
 }
-
 #endif
-
 
 #if OPT_SYSCALLS
 int
@@ -328,7 +249,8 @@ sys_read(int fd, userptr_t buf_ptr, size_t size)
   
   if (fd!=STDIN_FILENO) {
 #if OPT_FILE
-    return file_read(fd, buf_ptr, size);
+	int r=file_read(fd, buf_ptr, size);
+    return r;
 #else
     kprintf("sys_read supported only to stdin\n");
     return -1;

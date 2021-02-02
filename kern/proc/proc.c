@@ -66,10 +66,6 @@ static struct _processTable {
  */
 struct proc *kproc;
 
-/*
- * G.Cabodi - 2019
- * Initialize support for pid/waitpid.
- */
 struct proc *
 proc_search_pid(pid_t pid) {
 #if OPT_WAIT
@@ -84,14 +80,9 @@ proc_search_pid(pid_t pid) {
 #endif
 }
 
-/*
- * G.Cabodi - 2019
- * Initialize support for pid/waitpid.
- */
 static void
 proc_init_waitpid(struct proc *proc, const char *name) {
 #if OPT_WAIT
-  /* search a free index in table using a circular strategy */
   int i;
   spinlock_acquire(&processTable.lk);
   i = processTable.last_i+1;
@@ -124,14 +115,9 @@ proc_init_waitpid(struct proc *proc, const char *name) {
 #endif
 }
 
-/*
- * G.Cabodi - 2019
- * Terminate support for pid/waitpid.
- */
 static void
 proc_end_waitpid(struct proc *proc) {
 #if OPT_WAIT
-  /* remove the process from the table */
   int i;
   spinlock_acquire(&processTable.lk);
   i = proc->p_pid;
@@ -454,8 +440,6 @@ proc_wait(struct proc *proc)
 #endif
 }
 
-
-/* G.Cabodi - 2019 - support for waitpid */
 void
 proc_signal_end(struct proc *proc)
 {

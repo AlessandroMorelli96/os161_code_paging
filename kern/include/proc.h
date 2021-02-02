@@ -46,8 +46,6 @@ struct thread;
 struct vnode;
 
 #if OPT_WAIT
-/* G.Cabodi - 2019 - implement waitpid: 
-   synch with semaphore (1) or cond.var.(0) */
 #define USE_SEMAPHORE_FOR_WAITPID 0
 #endif
 
@@ -82,7 +80,6 @@ struct proc {
 
 	/* add more material here as needed */
 #if OPT_WAIT
-        /* G.Cabodi - 2019 - implement waitpid: synchro, and exit status */
         int p_status;                   /* status as obtained by exit() */
         pid_t p_pid;                    /* process pid */
 #if USE_SEMAPHORE_FOR_WAITPID

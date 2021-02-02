@@ -4,14 +4,18 @@
 #include <kern/errno.h>
 
 #if OPT_CODE
-int
+pagetable*
 pt_victim(struct addrspace *as)
 {
 	int victim;
    	static unsigned int next_victim = 0;
     	victim = next_victim;
      	next_victim = (next_victim + 1) % as->as_pt_npages;
-     	return victim;
+	pagetable *old=as->as_pagetable;			
+	for(int i=0;i<victim;i++){				
+		old=(pagetable *)old->next;	//ricerca vittima dato l'indice
+	}
+     	return old;
 }
 #endif
 
@@ -47,6 +51,10 @@ pt_destroy(pagetable *pt){
 #endif
 
 #if OPT_CODE
+//static pagetable* inserimento_pagina(pagetable* tmp, vaddr_t vaddr, paddr_t paddr);
+#endif
+
+#if OPT_CODE
 int
 pt_add(paddr_t paddr, struct addrspace *as, vaddr_t vaddr){
 
@@ -54,50 +62,47 @@ pt_add(paddr_t paddr, struct addrspace *as, vaddr_t vaddr){
 		if(as->as_pagetable == NULL){
 			return 1;
 		}
+		//funzione carina as->as-pagetable = f(as->as_pagetable,vaddr,paddr)
 		as->as_pt_npages++;
 		as->as_pagetable->pt_vaddr = vaddr;
 		as->as_pagetable->pt_paddr = paddr;
 		as->as_pagetable->next = NULL;
-		page_fault_zero++;
 		return 0;
 	}
 	else{
 		int i=0;
 		if(paddr!=0){  //c'è spazio per aggiungere una pagina in ram
 			pagetable *tmp;
-			for (tmp = as->as_pagetable; tmp->next != NULL; tmp = (pagetable *) tmp->next, i++) {}
-			pagetable *new = kmalloc(sizeof(pagetable));
+			for (tmp = as->as_pagetable; tmp->next != NULL; tmp = (pagetable *) tmp->next, i++);
+			pagetable *new = kmalloc(sizeof(pagetable));	//aggiungiamo new in coda alla lista
 			if(new == NULL)
 				return 1;
-
+			//funzione carina (new,vaddr,paddr)
 			new->pt_vaddr = vaddr;
 			new->pt_paddr = paddr;
 			new->next = NULL;
 			as->as_pt_npages++;
 			tmp->next = (struct pagetable *) new;
-			page_fault_zero++;
 			return 0;
-		} else if(as->count_swap<SWAPFILE_NPAGE){	 //swap out di una vecchia pagina (cercando una vittma) per inserire una nuova pagina in ram	
+		} else {	 //swap out di una vecchia pagina (cercando una vittma) per inserire una nuova pagina in ram	
 			//ricerca vittima
-			int vittima=pt_victim(as);
-			pagetable *old=as->as_pagetable;
-			for(int i=0;i<vittima;i++)				
-				old=(pagetable *)old->next;
-			
+			pagetable *old=pt_victim(as);
+
+			//swap out
 			if(swap_out(as,old))
 				return 1;
-			
+			//libera pagina
 			if(!freeppages(old->pt_paddr,1)){
 				kprintf("Errore freeppages\n");
 				return 1;
 			}
-
+			//rialloca pagina
 			paddr=getppages(1);
 			if(paddr==0){
 				kprintf("Errore getppages\n");
 				return 1;
 			}
-
+			//sovrascrivo la vittima nella pagetable
 			old->pt_vaddr=vaddr;
 			old->pt_paddr=paddr;
 			
@@ -105,7 +110,7 @@ pt_add(paddr_t paddr, struct addrspace *as, vaddr_t vaddr){
 		}
 	}
 
-	panic("Out of swap space\n"); //aggiungo una pagina ma lo swapfile è pieno
+	panic("I don't how to handle this\n");
 	return 1;
 }
 #endif
@@ -114,20 +119,15 @@ pt_add(paddr_t paddr, struct addrspace *as, vaddr_t vaddr){
 int
 pt_copy(pagetable *old, pagetable **ret){
 	
-	pagetable *new;
-	kprintf("pt_copy\n");	
+	pagetable *new;	
 	new = pt_create();
 	if(new == NULL){
 		return ENOMEM;
 	}
 
-	//new->as_pagetable = (pagetable *) kmalloc(sizeof(pagetable));
 	pagetable * tmp = new;
 	pagetable * old_tmp = old;
 	for(; old_tmp !=NULL; old_tmp = (pagetable *) old_tmp->next, tmp = (pagetable *) tmp->next){
-		//memmove((void *)PADDR_TO_KVADDR(new->pt_paddr),
-		//(const void *)PADDR_TO_KVADDR(old->pt_paddr),
-		//PAGE_SIZE);
 		tmp->pt_vaddr = old_tmp->pt_vaddr;
 		tmp->pt_paddr = old_tmp->pt_paddr;
 		if(old_tmp->next == NULL)
@@ -139,16 +139,6 @@ pt_copy(pagetable *old, pagetable **ret){
 			}
 	}
 	
-	//tmp = (pagetable *) new->as_pagetable;
-	//old_tmp = (pagetable *) old->as_pagetable;
-	//while(tmp){
-		kprintf("[*] tmp vaddr\n");
-	//	KASSERT(tmp->pt_paddr != 0);
-	//	KASSERT(tmp->pt_vaddr != 0);
-	//	tmp = (pagetable *) tmp->next;
-	//	old_tmp = (pagetable *) old_tmp->next;
-	//}
-
 	*ret = new;
 	return 0;
 }

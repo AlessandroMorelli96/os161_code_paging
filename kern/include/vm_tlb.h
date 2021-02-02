@@ -7,9 +7,7 @@
 #include "opt-virtual_memory_mng.h"
 //#include "opt-tlb.h" 	
 #include "opt-code.h"
-//int tlb_get_rr_victim(void);
 
-//int occupate;
 
 void vm_bootstrap(void);
 
@@ -28,9 +26,9 @@ paddr_t getppages(unsigned long npages);
 
 int freeppages(paddr_t addr, unsigned long npages);
 
+#if OPT_CODE
 void tlb_invalidate(paddr_t paddr);
 
-#if OPT_CODE
 void vfs_close_swap_wrap(void);
 #endif
 

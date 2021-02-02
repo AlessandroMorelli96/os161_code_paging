@@ -63,30 +63,25 @@ as_create(void)
 		return NULL;
 	}
 	
-	as->as_vbase1 = 0;
-	//as->as_pbase1 = 0;
-	as->as_npages1 = 0;
-	/*as->as_vbase2 = 0;
-	as->as_pbase2 = 0;
-	as->as_npages2 = 0;
-	as->as_stackpbase = 0;
-	*/
+	as->as_text_segment = 0;
+	as->as_txt_seg_npages = 0;
+
 #if OPT_CODE	
-	//max_pages=(int) (ram_getsize() / PAGE_SIZE);
 	as->as_pagetable = pt_create();
 	if(as->as_pagetable == NULL){
 		kprintf("Errore PT create return NULL\n");
 		return NULL;
 	}
+
 	as->as_pt_npages = 0;
 	int res=swap_create(as);
+
 	if(res)
 		return NULL;
-	as->lk=lock_create("addrresspace");
 
+	as->lk=lock_create("addrresspace");
 	spinlock_acquire(&spl_id);
 	as->as_active=1;
-
 	spinlock_release(&spl_id);
 #endif
 	return as;
@@ -95,7 +90,6 @@ as_create(void)
 int
 as_copy(struct addrspace *old, struct addrspace **ret)
 {
-	kprintf("as_copy\n");
 	(void)old;
 	(void)ret;
 	struct addrspace *new;
@@ -104,20 +98,20 @@ as_copy(struct addrspace *old, struct addrspace **ret)
 
 	new = as_create();
 	if (new==NULL) {
-		kprintf("Errore as create in as_copy");
 		return ENOMEM;
 	}
 
 #if OPT_CODE
+	/*
 	new->as_pt_npages = old->as_pt_npages;
 
 	if(pt_copy(old->as_pagetable, (&new->as_pagetable))){
 		kprintf("Errore copia pagetable");
 	}
+	*/
 #endif
 	/* (Mis)use as_prepare_load to allocate some physical memory. */
 	if (as_prepare_load(new)) {
-		kprintf("NON va");
 		as_destroy(new);
 		return ENOMEM;
 	}
@@ -150,18 +144,18 @@ as_activate(void)
 		return;
 	}
 	
+
 	/* Disable interrupts on this CPU while frobbing the TLB. */
 	spl = splhigh();
-	if(as->as_active==1){
+#if OPT_CODE
+	if(as->as_active==1){	//invalidazione tlb solo una volta appena creato l'addrspace
 		for (i=0; i<NUM_TLB; i++) {
 			tlb_write(TLBHI_INVALID(i), TLBLO_INVALID(), i);
 		}
-		as->as_active=0;
-
-#if OPT_CODE
+		as->as_active=0; //flag disabilitato
 		tlb_invalidation++;
-#endif
 	}
+#endif
 	splx(spl);
 
 }
@@ -190,7 +184,6 @@ int
 as_define_region(struct addrspace *as, vaddr_t vaddr, size_t sz,
 		 int readable, int writeable, int executable)
 {
-	//kprintf("as_define_region\n");	
 	size_t npages;
 
 	//dumbvm_can_sleep();
@@ -203,40 +196,19 @@ as_define_region(struct addrspace *as, vaddr_t vaddr, size_t sz,
 	sz = (sz + PAGE_SIZE - 1) & PAGE_FRAME;
 
 	npages = sz / PAGE_SIZE;
-	//kprintf("as_define_region 0x%08x size:%d %d %d %d\n",vaddr,(int)npages,readable,writeable,executable);	
 	/* We don't use these - all pages are read-write */
 	(void)readable;
 	(void)writeable;
 	(void)executable;
-	(void)as;
-	(void)vaddr;
-	(void)sz;
-	//return 0;
 
-	if (as->as_vbase1 == 0) {
-		as->as_vbase1 = vaddr;
-		as->as_npages1 = npages;
+#if OPT_CODE
+	if (as->as_text_segment == 0) { //definiamo lo spazio per i text segment
+		as->as_text_segment = vaddr;
+		as->as_txt_seg_npages = npages;
 		return 0;
 	}
 	return 0;
-#if OPT_CODE
-	/*
-	int res=pt_define_region(as->as_pagetable,vaddr,sz,npages,readable,writeable,executable);
-	if(res!=0){
-		kprintf("Errore!!\n");	
-	}else{
-		as->as_pt_npages = (int)npages;
-		//kprintf("fine define region!\n");	
-	}
-	*/
 #endif
-/*
-	if (as->as_vbase2 == 0) {
-		as->as_vbase2 = vaddr;
-		as->as_npages2 = npages;
-		return 0;
-	}
-*/
 	/*
 	 * Support for more than two regions is not available.
 	 */

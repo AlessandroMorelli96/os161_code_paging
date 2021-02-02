@@ -44,15 +44,13 @@
 struct vnode;
 
 #if OPT_CODE
-typedef struct Pagetable {
+typedef struct Pagetable {	//lista pagine pagetable
 	vaddr_t pt_vaddr;
 	paddr_t pt_paddr;
 	struct pagetable * next;
 } pagetable;
 
-//int max_pages;
-
-typedef struct Pagetable_Swap {
+typedef struct Pagetable_Swap {	//struttura per il vettore di pagine nello swapfile
 	vaddr_t sw_vaddr;
 	paddr_t sw_paddr;
 } pagetable_swap;
@@ -67,23 +65,15 @@ typedef struct Pagetable_Swap {
  */
 
 struct addrspace {
-#if OPT_VIRTUAL_MEMORY_MNG
-        vaddr_t as_vbase1;
-        //paddr_t as_pbase1;
-        size_t as_npages1;
-        /*vaddr_t as_vbase2;
-        paddr_t as_pbase2;
-        size_t as_npages2;
-        paddr_t as_stackpbase;*/
 #if OPT_CODE
-	pagetable *as_pagetable;
-	//pagetable *as_swap;
-	pagetable_swap *pts;
-	int as_pt_npages;
-	int count_swap;
-	int as_active;
+        vaddr_t as_text_segment;	//primo indirizzo di text segment
+        size_t as_txt_seg_npages;	//numero di pagine del text segment
+	pagetable *as_pagetable;	//puntatore alla testa della lista pagetable
+	pagetable_swap *pts;		//puntatore al vettore dello swapfile
+	int as_pt_npages;		//pagine correnti in pagetable
+	int as_sw_npages;		//pagine correnti nello swapfile
+	int as_active;			//flag di controllo (gestione context switch)
 	struct lock *lk;
-#endif
 #endif
 };
 
