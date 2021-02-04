@@ -74,11 +74,12 @@ as_create(void)
 	}
 
 	as->as_pt_npages = 0;
+
 	int res=swap_create(as);
 
 	if(res)
 		return NULL;
-
+	
 	as->lk=lock_create("addrresspace");
 	spinlock_acquire(&spl_id);
 	as->as_active=1;

@@ -249,7 +249,7 @@ static pagetable* ricerca_pagina(struct addrspace *as, vaddr_t faultaddress, int
 	pagetable* tmp=as->as_pagetable;
 	
 	for(;tmp != NULL && tmp->pt_vaddr != faultaddress; tmp = (pagetable *) tmp->next); //ricerca nella pagetable
-	if(tmp==NULL && as->as_pt_npages<pagineTotali){		//se non trova nella pagetable cerco nello swapfile solo se la pagetable è piena
+	if(tmp==NULL){						//se non trova nella pagetable cerco nello swapfile
 		for(int i=0;i<SWAPFILE_NPAGE;i++)		//ricerca nel vettore dello swapfile
 			if(as->pts[i].sw_vaddr==faultaddress) { 
 				*indice_sw=i;

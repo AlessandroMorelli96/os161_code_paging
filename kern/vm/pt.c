@@ -51,7 +51,11 @@ pt_destroy(pagetable *pt){
 #endif
 
 #if OPT_CODE
-//static pagetable* inserimento_pagina(pagetable* tmp, vaddr_t vaddr, paddr_t paddr);
+static void new_pagina(pagetable* tmp, vaddr_t vaddr, paddr_t paddr){
+	tmp->pt_vaddr = vaddr;
+	tmp->pt_paddr = paddr;
+	tmp->next = NULL;
+}
 #endif
 
 #if OPT_CODE
@@ -62,11 +66,8 @@ pt_add(paddr_t paddr, struct addrspace *as, vaddr_t vaddr){
 		if(as->as_pagetable == NULL){
 			return 1;
 		}
-		//funzione carina as->as-pagetable = f(as->as_pagetable,vaddr,paddr)
+		new_pagina(as->as_pagetable,vaddr,paddr);
 		as->as_pt_npages++;
-		as->as_pagetable->pt_vaddr = vaddr;
-		as->as_pagetable->pt_paddr = paddr;
-		as->as_pagetable->next = NULL;
 		return 0;
 	}
 	else{
@@ -77,10 +78,7 @@ pt_add(paddr_t paddr, struct addrspace *as, vaddr_t vaddr){
 			pagetable *new = kmalloc(sizeof(pagetable));	//aggiungiamo new in coda alla lista
 			if(new == NULL)
 				return 1;
-			//funzione carina (new,vaddr,paddr)
-			new->pt_vaddr = vaddr;
-			new->pt_paddr = paddr;
-			new->next = NULL;
+			new_pagina(new,vaddr,paddr);
 			as->as_pt_npages++;
 			tmp->next = (struct pagetable *) new;
 			return 0;

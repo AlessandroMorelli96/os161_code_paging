@@ -105,9 +105,9 @@ int swap_init_create(void){
 	if (result) {
 		kprintf("Errore apertura swapfile %d\n", result);
 		return result;
-	}else{
-		return result;
 	}
+
+	return result;	
 }
 #endif
 
