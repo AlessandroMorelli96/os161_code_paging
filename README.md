@@ -26,32 +26,3 @@ git add <file1> <folder1> ...
 git commit -m "Message"
 git push
 ```
-
-# STUTTURE IMPORTANTI
-
-## VNODE
-``` c
-/*
- * A struct vnode is an abstract representation of a file.
- *
- * It is an interface in the Java sense that allows the kernel's
- * filesystem-independent code to interact usefully with multiple sets
- * of filesystem code.
- */
-
-/*
- * Abstract low-level file.
- *
- * Note: vn_fs may be null if the vnode refers to a device.
- */
-struct vnode {
-    int vn_refcount;                /* Reference count */
-    struct spinlock vn_countlock;   /* Lock for vn_refcount */
-
-    struct fs *vn_fs;               /* Filesystem vnode belongs to */
-
-    void *vn_data;                  /* Filesystem-specific data */
-
-    const struct vnode_ops *vn_ops; /* Functions on this vnode */
-};
-```
